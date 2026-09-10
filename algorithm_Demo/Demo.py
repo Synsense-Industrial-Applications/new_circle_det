@@ -33,6 +33,14 @@ from circle_runtime import (  # noqa: E402
     DEFAULT_CIRCLE_FILTERS,
     DIRECTION_ANGLES_DEG,
     FEATURE_TO_DIRECTION,
+    decode_layer4_event,
+)
+from hit_replay import (  # noqa: E402
+    HitReplayConfig,
+    HitReplayViewer,
+    RadiusPeakHitDetector,
+    SlidingEventWindow,
+    format_hit_trigger,
 )
 
 
@@ -82,6 +90,40 @@ CIRCLE_DETECTOR_CONFIG = AdaptiveDetectorConfig(
 # 新增过滤条件时，只需实现一个 CircleFilterRule 并追加到这个元组；
 # CircleDetectionPipeline 主流程和拒绝统计无需修改。
 CIRCLE_FILTER_RULES = DEFAULT_CIRCLE_FILTERS
+
+
+# 击球时机和回放。半径先上升后回落时取局部峰值为击球时刻；如果半径持续
+# 上升后连续丢圆，也可以把最后一个有效圆作为击球时刻。时间单位为微秒。
+HIT_REPLAY_CONFIG = HitReplayConfig(
+    enabled=True,
+    cue_x_px=68.0,
+    cue_y_px=83.0,
+    timing_required_filter_rules=("radius", "center_x", "center_y"),
+    min_timing_confidence=0.15,
+    radius_ema_alpha=0.45,
+    rise_window_samples=24,
+    fall_confirm_samples=3,
+    max_peak_age_samples=30,
+    min_radius_rise_px=0.80,
+    min_radius_fall_px=0.55,
+    min_rising_fraction=0.60,
+    min_falling_fraction=0.67,
+    min_peak_radius_px=35.0,
+    detect_rise_then_lost=True,
+    lost_confirm_updates=3,
+    lost_min_radius_px=38.0,
+    lost_min_radius_rise_px=1.00,
+    cooldown_us=800_000.0,
+    pre_hit_us=150_000.0,
+    post_hit_us=200_000.0,
+    buffer_duration_us=700_000.0,
+    max_buffer_events=60_000,
+    replay_speed=0.20,
+    replay_fps=30.0,
+    event_trail_us=35_000.0,
+    final_hold_sec=1.5,
+    replay_queue_size=2,
+)
 
 
 @dataclass(frozen=True)
@@ -482,6 +524,28 @@ def _confidence_value(detection):
         return float("nan")
 
 
+def _hit_timing_detection(update):
+    """Use stable geometry for timing even if final confidence briefly dips."""
+
+    detection = update.detection
+    report = update.filter_report
+    if detection is None or report is None:
+        return None
+    decisions = {decision.rule_name: decision.passed for decision in report.decisions}
+    if not all(
+        decisions.get(rule_name, False)
+        for rule_name in HIT_REPLAY_CONFIG.timing_required_filter_rules
+    ):
+        return None
+    confidence = _confidence_value(detection)
+    if (
+        not np.isfinite(confidence)
+        or confidence < HIT_REPLAY_CONFIG.min_timing_confidence
+    ):
+        return None
+    return detection
+
+
 def format_output_line(update):
     """Stable machine-readable line for an accepted circle only."""
 
@@ -518,6 +582,12 @@ class TerminalReporter:
         self._pending_output = None
         self.output_lines_emitted = 0
         self.output_updates_coalesced = 0
+        self.hit_count = 0
+        self.replay_clips = 0
+        self.replay_events = 0
+        self.replay_dropped = 0
+        self.last_hit_line = "HIT waiting for a radius peak"
+        self.last_replay_line = "REPLAY waiting"
 
     def record_update(self, update):
         self.last_update = update
@@ -545,6 +615,27 @@ class TerminalReporter:
 
     def record_invalid_event(self, error):
         self.last_error = str(error)
+
+    def record_hit(self, trigger):
+        self.hit_count += 1
+        self.last_hit_line = format_hit_trigger(trigger)
+        print(self.last_hit_line, flush=True)
+
+    def record_replay(self, clip, queued, dropped_clips):
+        self.replay_clips += int(bool(queued))
+        self.replay_events += len(clip.events)
+        self.replay_dropped = int(dropped_clips)
+        state = "queued" if queued else "viewer_unavailable"
+        completeness = "complete" if clip.complete else "partial"
+        self.last_replay_line = (
+            f"REPLAY hit={clip.trigger.hit_number} state={state} "
+            f"clip={completeness} events={len(clip.events):,} "
+            f"range=[-{HIT_REPLAY_CONFIG.pre_hit_us/1000:g}, "
+            f"+{HIT_REPLAY_CONFIG.post_hit_us/1000:g}]ms "
+            f"speed={HIT_REPLAY_CONFIG.replay_speed:g}x "
+            f"dropped={self.replay_dropped}"
+        )
+        print(f"[HIT {self.last_replay_line}]", flush=True)
 
     def set_rates(
         self,
@@ -678,6 +769,8 @@ class TerminalReporter:
             quality_line,
             output_line,
             counter_line,
+            self.last_hit_line,
+            self.last_replay_line,
             performance_line,
             error_line,
         ]
@@ -741,6 +834,23 @@ def print_runtime_configuration():
         f"{TERMINAL_CONFIG.accepted_output_interval_sec:g}s "
         "(0 means every accepted update)"
     )
+    hit = HIT_REPLAY_CONFIG
+    print(
+        "Hit timing: radius EMA alpha="
+        f"{hit.radius_ema_alpha:g}, rise={hit.min_radius_rise_px:g}px/"
+        f"{hit.rise_window_samples} samples, "
+        f"fall={hit.min_radius_fall_px:g}px/"
+        f"{hit.fall_confirm_samples} samples, "
+        f"timing_conf>={hit.min_timing_confidence:g}, "
+        f"lost_path={hit.detect_rise_then_lost}, "
+        f"cooldown={hit.cooldown_us/1000:g}ms"
+    )
+    print(
+        "Hit replay: "
+        f"enabled={hit.enabled}, pre={hit.pre_hit_us/1000:g}ms, "
+        f"post={hit.post_hit_us/1000:g}ms, "
+        f"speed={hit.replay_speed:g}x, cue=({hit.cue_x_px:g}, {hit.cue_y_px:g})"
+    )
     print("=" * 88)
 
 
@@ -753,6 +863,9 @@ def print_final_summary(pipeline, reporter, elapsed_sec):
         f"updates={stats.detector_updates:,} candidates={stats.candidates:,} "
         f"accepted={stats.accepted:,} rejected={stats.rejected:,} "
         f"none={stats.no_candidate:,} invalid={stats.invalid_events:,} "
+        f"hits={reporter.hit_count:,} replay_clips={reporter.replay_clips:,} "
+        f"replay_events={reporter.replay_events:,} "
+        f"replay_dropped={reporter.replay_dropped:,} "
         f"terminal_outputs={reporter.output_lines_emitted:,} "
         f"coalesced={reporter.output_updates_coalesced:,}"
     )
@@ -815,6 +928,23 @@ def main():
         CIRCLE_FILTER_RULES,
     )
     reporter = TerminalReporter(pipeline)
+    hit_detector = RadiusPeakHitDetector(HIT_REPLAY_CONFIG)
+    hit_event_window = SlidingEventWindow(HIT_REPLAY_CONFIG)
+    hit_replay_viewer = HitReplayViewer(HIT_REPLAY_CONFIG)
+    replay_started = hit_replay_viewer.start()
+    print(
+        "Hit replay viewer: "
+        + ("started" if replay_started else "disabled or unavailable")
+    )
+
+    def dispatch_ready_replays():
+        for clip in hit_event_window.pop_ready():
+            queued = hit_replay_viewer.submit(clip)
+            reporter.record_replay(
+                clip,
+                queued=queued,
+                dropped_clips=hit_replay_viewer.dropped_clips,
+            )
 
     # Discard events left over from configuration.
     event_buffer.get_events()
@@ -848,17 +978,43 @@ def main():
                         continue
                     layer4_events_interval += 1
                     try:
-                        update = pipeline.process_raw_event(
+                        flow_event = decode_layer4_event(
                             getattr(event, "x"),
                             getattr(event, "y"),
                             getattr(event, "feature"),
                             getattr(event, "timestamp"),
                         )
                     except (AttributeError, TypeError, ValueError) as error:
+                        pipeline.stats.invalid_events += 1
                         reporter.record_invalid_event(error)
                         continue
+                    if HIT_REPLAY_CONFIG.enabled:
+                        hit_event_window.push(flow_event)
+                        dispatch_ready_replays()
+                    update = pipeline.process_flow_event(flow_event)
                     if update is not None:
                         reporter.record_update(update)
+                        trigger = None
+                        if HIT_REPLAY_CONFIG.enabled:
+                            detection = _hit_timing_detection(update)
+                            if detection is None:
+                                trigger = hit_detector.observe_missing(
+                                    timestamp=flow_event.t
+                                )
+                            else:
+                                trigger = hit_detector.observe_circle(
+                                    update_number=update.update_number,
+                                    source_event_count=update.source_event_count,
+                                    timestamp=detection.timestamp,
+                                    cx=detection.cx,
+                                    cy=detection.cy,
+                                    radius=detection.radius,
+                                    confidence=_confidence_value(detection),
+                                )
+                            if trigger is not None:
+                                reporter.record_hit(trigger)
+                                hit_event_window.arm(trigger)
+                                dispatch_ready_replays()
 
             now = time.monotonic()
             rate_elapsed = now - rate_started
@@ -890,6 +1046,15 @@ def main():
 
     finally:
         reporter.flush()
+        if HIT_REPLAY_CONFIG.enabled:
+            for clip in hit_event_window.flush():
+                queued = hit_replay_viewer.submit(clip)
+                reporter.record_replay(
+                    clip,
+                    queued=queued,
+                    dropped_clips=hit_replay_viewer.dropped_clips,
+                )
+        hit_replay_viewer.close(timeout_sec=5.0)
         try:
             input_graph.stop()
         except Exception:
