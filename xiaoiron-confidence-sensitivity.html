@@ -1,0 +1,1893 @@
+<!doctype html>
+<html lang="en" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Xiaoiron Confidence Sensitivity</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Xiaoiron Confidence Sensitivity" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot; data-visualize-standalone&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Xiaoiron Confidence Sensitivity&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 14px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --icon-size: 16px;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --corner-shape: round;
+  --radius: var(--border-radius-lg, 10px);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: var(--visualize-paint-gutter, 0px);
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans) !important;
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: var(--corner-shape);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card, .progress) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+hr {
+  width: 100%;
+  height: 1px;
+  margin-block: 6px;
+  border: 0;
+  background: var(--border);
+}
+
+.nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress {
+  display: flex;
+  height: 8px;
+  margin-block: calc((var(--line-height-normal, 1.5em) - 8px) / 2);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+}
+
+.progress-bar:only-child {
+  border-radius: var(--radius-full);
+}
+
+.progress-bar {
+  height: 100%;
+  flex-shrink: 0;
+  border: 0;
+  background: var(--viz-series-1);
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.nav-link,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn,
+.nav-link {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover,
+.nav-link:not(:disabled):not([aria-disabled=&quot;true&quot;]):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.nav-pills .nav-link {
+  min-width: 0;
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.nav-justified .nav-link {
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.nav-pills .nav-link.active {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.btn:disabled,
+.nav-link:disabled,
+.nav-link[aria-disabled=&quot;true&quot;] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: var(--corner-shape);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+  [aria-pressed=&quot;true&quot;],
+  [aria-selected=&quot;true&quot;],
+  .is-selected
+) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .nav-link,
+  .form-control,
+  .form-select {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Keep small-screen WebKit from zooming when a text field receives focus. */
+  .form-control,
+  .form-select {
+    font-size: max(16px, var(--font-size-normal));
+  }
+
+  .form-control[type=&quot;file&quot;]::file-selector-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .form-control-color[type=&quot;color&quot;] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .form-control:is(
+    [type=&quot;date&quot;],
+    [type=&quot;datetime-local&quot;],
+    [type=&quot;month&quot;],
+    [type=&quot;time&quot;],
+    [type=&quot;week&quot;]
+  ) {
+    min-width: 0;
+    max-width: 100%;
+    padding-block: 8px;
+  }
+
+  .form-check {
+    min-height: 44px;
+    padding-inline: 15px;
+  }
+
+  .form-check-input {
+    position: relative;
+  }
+
+  .form-check-input::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    content: &quot;&quot;;
+    transform: translate(-50%, -50%);
+  }
+
+  .form-check-label {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .form-range {
+    height: 44px;
+    touch-action: pan-y;
+  }
+
+  .form-range::-webkit-slider-runnable-track {
+    height: 44px;
+  }
+
+  .form-range::-moz-range-track {
+    height: 44px;
+  }
+
+  .form-range::-webkit-slider-thumb {
+    margin-top: 12px;
+  }
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: var(--icon-size) !important;
+  height: var(--icon-size) !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div id=&quot;xiaoiron-event-lab&quot;&gt;
+  &lt;style&gt;
+    #xiaoiron-event-lab {
+      --x-pad: clamp(14px, 2.2vw, 28px);
+      color: var(--foreground);
+      background: var(--background);
+      font-family: var(--font-sans);
+      padding: var(--x-pad);
+      line-height: 1.35;
+    }
+    #xiaoiron-event-lab * { box-sizing: border-box; }
+    #xiaoiron-event-lab .xr-title { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 14px; }
+    #xiaoiron-event-lab h1 { margin: 0; font-size: clamp(20px, 2.6vw, 30px); letter-spacing: -0.02em; }
+    #xiaoiron-event-lab h2 { margin: 0 0 8px; font-size: 15px; }
+    #xiaoiron-event-lab p { margin: 4px 0 0; }
+    #xiaoiron-event-lab .xr-muted { color: var(--muted-foreground); font-size: 12px; }
+    #xiaoiron-event-lab .xr-grid { display: grid; grid-template-columns: minmax(390px, 1.08fr) minmax(330px, 0.92fr); gap: 18px; align-items: start; }
+    #xiaoiron-event-lab .xr-panel { min-width: 0; }
+    #xiaoiron-event-lab .xr-canvas-wrap { position: relative; width: 100%; min-height: 440px; }
+    #xiaoiron-event-lab svg { display: block; width: 100%; height: auto; overflow: visible; }
+    #xiaoiron-event-lab .xr-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 9px 0 11px; }
+    #xiaoiron-event-lab .xr-toolbar .btn { min-height: 30px; padding: 5px 9px; font-size: 12px; }
+    #xiaoiron-event-lab .xr-toolbar .btn[data-active=&quot;true&quot;] { background: var(--accent); color: var(--accent-foreground); }
+    #xiaoiron-event-lab .xr-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px; }
+    #xiaoiron-event-lab .xr-field { min-width: 0; }
+    #xiaoiron-event-lab .xr-field label { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px; }
+    #xiaoiron-event-lab .xr-field input[type=&quot;range&quot;] { width: 100%; accent-color: var(--primary); }
+    #xiaoiron-event-lab .xr-field input[type=&quot;number&quot;],
+    #xiaoiron-event-lab .xr-field select { width: 100%; min-height: 30px; }
+    #xiaoiron-event-lab .xr-rule { border: 0; border-top: 1px solid var(--border); margin: 13px 0; }
+    #xiaoiron-event-lab .xr-metrics { display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    #xiaoiron-event-lab .xr-metric { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; background: var(--card); }
+    #xiaoiron-event-lab .xr-metric small { display: block; color: var(--muted-foreground); font-size: 11px; }
+    #xiaoiron-event-lab .xr-metric strong { display: block; margin-top: 2px; font-size: clamp(18px, 2.6vw, 28px); font-variant-numeric: tabular-nums; }
+    #xiaoiron-event-lab .xr-metric:first-child strong { color: var(--primary); }
+    #xiaoiron-event-lab .xr-breakdown { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+    #xiaoiron-event-lab .xr-breakdown th,
+    #xiaoiron-event-lab .xr-breakdown td { padding: 6px 7px; border-bottom: 1px solid var(--border); text-align: right; }
+    #xiaoiron-event-lab .xr-breakdown th:first-child,
+    #xiaoiron-event-lab .xr-breakdown td:first-child { text-align: left; }
+    #xiaoiron-event-lab .xr-equation { padding: 9px 10px; margin-top: 10px; background: var(--muted); border-radius: var(--radius); font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+    #xiaoiron-event-lab .xr-bottom { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 18px; margin-top: 20px; }
+    #xiaoiron-event-lab .xr-chart { min-width: 0; }
+    #xiaoiron-event-lab .xr-legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 6px; font-size: 11px; color: var(--muted-foreground); }
+    #xiaoiron-event-lab .xr-key { display: inline-flex; align-items: center; gap: 5px; }
+    #xiaoiron-event-lab .xr-swatch { width: 9px; height: 9px; border-radius: 50%; background: var(--swatch); }
+    #xiaoiron-event-lab .xr-status { min-height: 18px; margin-top: 7px; font-size: 12px; color: var(--muted-foreground); }
+    #xiaoiron-event-lab .xr-tooltip {
+      position: absolute; z-index: 10; pointer-events: none; opacity: 0;
+      background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow-md); padding: 7px 9px; font-size: 11px;
+      max-width: 220px; transition: opacity 80ms linear;
+    }
+    #xiaoiron-event-lab .xr-c0 { --swatch: var(--chart-1); }
+    #xiaoiron-event-lab .xr-c1 { --swatch: var(--chart-2); }
+    #xiaoiron-event-lab .xr-c2 { --swatch: var(--chart-3); }
+    #xiaoiron-event-lab .xr-c3 { --swatch: var(--chart-4); }
+    #xiaoiron-event-lab .xr-help { display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; font-size: 11px; color: var(--muted-foreground); margin-top: 8px; }
+    #xiaoiron-event-lab .xr-help b { color: var(--foreground); font-weight: 600; }
+    @media (max-width: 760px) {
+      #xiaoiron-event-lab .xr-grid, #xiaoiron-event-lab .xr-bottom { grid-template-columns: 1fr; }
+      #xiaoiron-event-lab .xr-canvas-wrap { min-height: 360px; }
+      #xiaoiron-event-lab .xr-title { align-items: start; flex-direction: column; }
+    }
+    @media (max-width: 430px) {
+      #xiaoiron-event-lab .xr-controls { grid-template-columns: 1fr; }
+      #xiaoiron-event-lab .xr-metrics { grid-template-columns: 1fr 1fr; }
+      #xiaoiron-event-lab .xr-metric:first-child { grid-column: 1 / -1; }
+    }
+  &lt;/style&gt;
+
+  &lt;div class=&quot;xr-title&quot;&gt;
+    &lt;div&gt;
+      &lt;h1&gt;xiaoiron confidence · 事件圆实验台&lt;/h1&gt;
+      &lt;p class=&quot;xr-muted&quot;&gt;128 × 128 像素画布。直接编辑事件，观察每个扇区证据与最终置信度怎样变化。&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;button class=&quot;btn btn-outline&quot; id=&quot;xr-refit&quot;&gt;事件贴合当前圆&lt;/button&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;xr-grid&quot;&gt;
+    &lt;section class=&quot;xr-panel&quot; aria-labelledby=&quot;xr-canvas-title&quot;&gt;
+      &lt;h2 id=&quot;xr-canvas-title&quot;&gt;事件画布&lt;/h2&gt;
+      &lt;div class=&quot;xr-toolbar&quot; aria-label=&quot;事件预设&quot;&gt;
+        &lt;button class=&quot;btn btn-secondary&quot; data-preset=&quot;occluded&quot;&gt;下方遮挡&lt;/button&gt;
+        &lt;button class=&quot;btn btn-ghost&quot; data-preset=&quot;full&quot;&gt;完整圆&lt;/button&gt;
+        &lt;button class=&quot;btn btn-ghost&quot; data-preset=&quot;mixed&quot;&gt;2/6 方向混杂&lt;/button&gt;
+        &lt;button class=&quot;btn btn-ghost&quot; data-preset=&quot;missing6&quot;&gt;缺少扇区 6&lt;/button&gt;
+        &lt;button class=&quot;btn btn-ghost&quot; data-preset=&quot;sparse&quot;&gt;稀疏圆&lt;/button&gt;
+        &lt;button class=&quot;btn btn-ghost&quot; id=&quot;xr-clear&quot;&gt;清空&lt;/button&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;xr-canvas-wrap&quot;&gt;
+        &lt;svg id=&quot;xr-event-svg&quot; role=&quot;img&quot; aria-label=&quot;可编辑的128乘128事件画布&quot;&gt;&lt;/svg&gt;
+        &lt;div class=&quot;xr-tooltip&quot; id=&quot;xr-canvas-tip&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;xr-legend&quot; aria-label=&quot;光流方向图例&quot;&gt;
+        &lt;span class=&quot;xr-key xr-c0&quot;&gt;&lt;span class=&quot;xr-swatch&quot;&gt;&lt;/span&gt;c=0 ↘&lt;/span&gt;
+        &lt;span class=&quot;xr-key xr-c1&quot;&gt;&lt;span class=&quot;xr-swatch&quot;&gt;&lt;/span&gt;c=1 ↙&lt;/span&gt;
+        &lt;span class=&quot;xr-key xr-c2&quot;&gt;&lt;span class=&quot;xr-swatch&quot;&gt;&lt;/span&gt;c=2 ↖&lt;/span&gt;
+        &lt;span class=&quot;xr-key xr-c3&quot;&gt;&lt;span class=&quot;xr-swatch&quot;&gt;&lt;/span&gt;c=3 ↗&lt;/span&gt;
+        &lt;span class=&quot;xr-key&quot;&gt;紫色扇区：2 / 6&lt;/span&gt;
+        &lt;span class=&quot;xr-key&quot;&gt;橙色扇区：11 / 12 / 13&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;xr-help&quot;&gt;
+        &lt;b&gt;添加&lt;/b&gt;&lt;span&gt;点击画布空白处；使用当前方向与权重。&lt;/span&gt;
+        &lt;b&gt;修改&lt;/b&gt;&lt;span&gt;点击事件后拖动，或在右侧精确修改 x / y / c / 权重。&lt;/span&gt;
+        &lt;b&gt;删除&lt;/b&gt;&lt;span&gt;选中事件后点击“删除选中事件”。圆周带外的事件会变淡且不计分。&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+
+    &lt;section class=&quot;xr-panel&quot; aria-labelledby=&quot;xr-controls-title&quot;&gt;
+      &lt;h2 id=&quot;xr-controls-title&quot;&gt;实时置信度&lt;/h2&gt;
+      &lt;div class=&quot;xr-metrics&quot;&gt;
+        &lt;div class=&quot;xr-metric&quot;&gt;&lt;small&gt;C_xiaoiron&lt;/small&gt;&lt;strong id=&quot;xr-confidence&quot;&gt;—&lt;/strong&gt;&lt;/div&gt;
+        &lt;div class=&quot;xr-metric&quot;&gt;&lt;small&gt;R₂,₆ = min(r₂,r₆)&lt;/small&gt;&lt;strong id=&quot;xr-r&quot;&gt;—&lt;/strong&gt;&lt;/div&gt;
+        &lt;div class=&quot;xr-metric&quot;&gt;&lt;small&gt;O × D&lt;/small&gt;&lt;strong id=&quot;xr-factor&quot;&gt;—&lt;/strong&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;table class=&quot;xr-breakdown&quot; aria-label=&quot;二号与六号扇区证据分解&quot;&gt;
+        &lt;thead&gt;&lt;tr&gt;&lt;th&gt;证据&lt;/th&gt;&lt;th&gt;扇区 2&lt;/th&gt;&lt;th&gt;扇区 6&lt;/th&gt;&lt;th&gt;说明&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+        &lt;tbody&gt;
+          &lt;tr&gt;&lt;td&gt;n&lt;/td&gt;&lt;td id=&quot;xr-n2&quot;&gt;—&lt;/td&gt;&lt;td id=&quot;xr-n6&quot;&gt;—&lt;/td&gt;&lt;td&gt;圆周事件数&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;W&lt;/td&gt;&lt;td id=&quot;xr-w2&quot;&gt;—&lt;/td&gt;&lt;td id=&quot;xr-w6&quot;&gt;—&lt;/td&gt;&lt;td&gt;衰减后权重和&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;q&lt;/td&gt;&lt;td id=&quot;xr-q2&quot;&gt;—&lt;/td&gt;&lt;td id=&quot;xr-q6&quot;&gt;—&lt;/td&gt;&lt;td&gt;事件充分程度&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;p&lt;/td&gt;&lt;td id=&quot;xr-p2&quot;&gt;—&lt;/td&gt;&lt;td id=&quot;xr-p6&quot;&gt;—&lt;/td&gt;&lt;td&gt;方向纯度&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;r=q·p&lt;/td&gt;&lt;td id=&quot;xr-r2&quot;&gt;—&lt;/td&gt;&lt;td id=&quot;xr-r6&quot;&gt;—&lt;/td&gt;&lt;td&gt;有效同向证据&lt;/td&gt;&lt;/tr&gt;
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+      &lt;div class=&quot;xr-equation&quot; id=&quot;xr-equation&quot;&gt;&lt;/div&gt;
+
+      &lt;hr class=&quot;xr-rule&quot;&gt;
+      &lt;h2&gt;选中事件 / 新事件&lt;/h2&gt;
+      &lt;div class=&quot;xr-controls&quot;&gt;
+        &lt;div class=&quot;xr-field&quot; style=&quot;grid-column: 1 / -1&quot;&gt;
+          &lt;label for=&quot;xr-event-list&quot;&gt;&lt;span&gt;选中事件&lt;/span&gt;&lt;span id=&quot;xr-event-count&quot;&gt;0 个&lt;/span&gt;&lt;/label&gt;
+          &lt;select class=&quot;select&quot; id=&quot;xr-event-list&quot; aria-label=&quot;选中事件&quot;&gt;&lt;option value=&quot;&quot;&gt;未选中（点击画布添加）&lt;/option&gt;&lt;/select&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;xr-field&quot;&gt;
+          &lt;label for=&quot;xr-event-x&quot;&gt;&lt;span&gt;x&lt;/span&gt;&lt;/label&gt;
+          &lt;input class=&quot;input&quot; id=&quot;xr-event-x&quot; type=&quot;number&quot; min=&quot;0&quot; max=&quot;127&quot; step=&quot;0.1&quot; disabled&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;xr-field&quot;&gt;
+          &lt;label for=&quot;xr-event-y&quot;&gt;&lt;span&gt;y&lt;/span&gt;&lt;/label&gt;
+          &lt;input class=&quot;input&quot; id=&quot;xr-event-y&quot; type=&quot;number&quot; min=&quot;0&quot; max=&quot;127&quot; step=&quot;0.1&quot; disabled&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;xr-field&quot;&gt;
+          &lt;label for=&quot;xr-direction&quot;&gt;&lt;span&gt;方向 c&lt;/span&gt;&lt;span id=&quot;xr-direction-out&quot;&gt;0 ↘&lt;/span&gt;&lt;/label&gt;
+          &lt;select class=&quot;select&quot; id=&quot;xr-direction&quot;&gt;
+            &lt;option value=&quot;0&quot;&gt;0 · ↘&lt;/option&gt;&lt;option value=&quot;1&quot;&gt;1 · ↙&lt;/option&gt;
+            &lt;option value=&quot;2&quot;&gt;2 · ↖&lt;/option&gt;&lt;option value=&quot;3&quot;&gt;3 · ↗&lt;/option&gt;
+          &lt;/select&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;xr-field&quot;&gt;
+          &lt;label for=&quot;xr-weight&quot;&gt;&lt;span&gt;衰减后权重&lt;/span&gt;&lt;output id=&quot;xr-weight-out&quot;&gt;1.00&lt;/output&gt;&lt;/label&gt;
+          &lt;input id=&quot;xr-weight&quot; type=&quot;range&quot; min=&quot;0.05&quot; max=&quot;1&quot; step=&quot;0.05&quot; value=&quot;1&quot;&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;xr-toolbar&quot;&gt;
+        &lt;button class=&quot;btn btn-outline&quot; id=&quot;xr-delete&quot; disabled&gt;删除选中事件&lt;/button&gt;
+        &lt;button class=&quot;btn btn-ghost&quot; id=&quot;xr-deselect&quot;&gt;取消选择&lt;/button&gt;
+      &lt;/div&gt;
+
+      &lt;hr class=&quot;xr-rule&quot;&gt;
+      &lt;h2&gt;候选圆与公式参数&lt;/h2&gt;
+      &lt;div class=&quot;xr-controls&quot; id=&quot;xr-param-controls&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;xr-status&quot; id=&quot;xr-live-status&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+    &lt;/section&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;xr-bottom&quot;&gt;
+    &lt;section class=&quot;xr-chart&quot;&gt;
+      &lt;h2&gt;16 扇区方向证据&lt;/h2&gt;
+      &lt;p class=&quot;xr-muted&quot;&gt;仅统计圆周带内事件；柱高为衰减后权重 W，颜色表示 c。&lt;/p&gt;
+      &lt;svg id=&quot;xr-sector-svg&quot; role=&quot;img&quot; aria-label=&quot;16扇区方向权重堆叠图&quot;&gt;&lt;/svg&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;xr-chart&quot;&gt;
+      &lt;h2&gt;当前事件下的参数对比&lt;/h2&gt;
+      &lt;p class=&quot;xr-muted&quot;&gt;横轴 α，纵轴 λ；圆点是当前参数，颜色深浅表示最终置信度。&lt;/p&gt;
+      &lt;svg id=&quot;xr-heat-svg&quot; role=&quot;img&quot; aria-label=&quot;alpha与lambda对最终置信度的影响热力图&quot;&gt;&lt;/svg&gt;
+    &lt;/section&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script src=&quot;https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const root = document.getElementById(&quot;xiaoiron-event-lab&quot;);
+  const $ = (s) =&gt; root.querySelector(s);
+  const $$ = (s) =&gt; [...root.querySelectorAll(s)];
+  const css = (name) =&gt; getComputedStyle(root).getPropertyValue(name).trim();
+  const clamp = (v, lo, hi) =&gt; Math.max(lo, Math.min(hi, v));
+  const fmt = (v, n=3) =&gt; Number.isFinite(v) ? v.toFixed(n) : &quot;—&quot;;
+  const arrows = [&quot;↘&quot;, &quot;↙&quot;, &quot;↖&quot;, &quot;↗&quot;];
+  const dirVec = [[1,1],[-1,1],[-1,-1],[1,-1]];
+  const special26 = new Set([2,6]);
+  const lower = new Set([11,12,13]);
+  let nextId = 1, selectedId = null, dragging = false, brushDir = 0, brushWeight = 1;
+  let preset = &quot;occluded&quot;;
+  let events = [];
+  let widths = { canvas: 520, sector: 620, heat: 480 };
+
+  const state = {
+    cx: 64, cy: 64, radius: 34, tolerance: 2.5,
+    full: 0.4, alpha: 0.5, lambda: 1.5,
+    nmin: 8, wmin: 4, kmin: 6, minSectorWeight: 1
+  };
+  const paramDefs = [
+    [&quot;cx&quot;,&quot;圆心 x&quot;,18,110,1], [&quot;cy&quot;,&quot;圆心 y&quot;,18,110,1],
+    [&quot;radius&quot;,&quot;半径 r&quot;,10,56,1], [&quot;tolerance&quot;,&quot;圆周容差&quot;,0.5,8,0.5],
+    [&quot;full&quot;,&quot;C_full&quot;,0,1,0.01], [&quot;alpha&quot;,&quot;α 遮挡奖励&quot;,0,1,0.05],
+    [&quot;lambda&quot;,&quot;λ 方向惩罚&quot;,0,4,0.1], [&quot;nmin&quot;,&quot;N_min&quot;,1,20,1],
+    [&quot;wmin&quot;,&quot;W_min&quot;,0.5,12,0.5], [&quot;kmin&quot;,&quot;K_min&quot;,1,13,1],
+    [&quot;minSectorWeight&quot;,&quot;扇区覆盖阈值&quot;,0.1,4,0.1]
+  ];
+
+  const paramWrap = $(&quot;#xr-param-controls&quot;);
+  paramDefs.forEach(([key,label,min,max,step]) =&gt; {
+    const field = document.createElement(&quot;div&quot;);
+    field.className = &quot;xr-field&quot;;
+    field.innerHTML = &#x27;&lt;label for=&quot;xr-p-&#x27;+key+&#x27;&quot;&gt;&lt;span&gt;&#x27;+label+&#x27;&lt;/span&gt;&lt;output id=&quot;xr-o-&#x27;+key+&#x27;&quot;&gt;&lt;/output&gt;&lt;/label&gt;&#x27;+
+      &#x27;&lt;input id=&quot;xr-p-&#x27;+key+&#x27;&quot; type=&quot;range&quot; min=&quot;&#x27;+min+&#x27;&quot; max=&quot;&#x27;+max+&#x27;&quot; step=&quot;&#x27;+step+&#x27;&quot;&gt;&#x27;;
+    paramWrap.appendChild(field);
+    const input = field.querySelector(&quot;input&quot;);
+    input.value = state[key];
+    input.addEventListener(&quot;input&quot;, () =&gt; {
+      state[key] = +input.value;
+      field.querySelector(&quot;output&quot;).textContent = (step &lt; 1 ? state[key].toFixed(step &lt; 0.1 ? 2 : 1) : state[key].toFixed(0));
+      update();
+    });
+    field.querySelector(&quot;output&quot;).textContent = step &lt; 1 ? state[key].toFixed(step &lt; 0.1 ? 2 : 1) : state[key].toFixed(0);
+  });
+
+  function sectorOf(x,y) {
+    let s = Math.floor((Math.atan2(y-state.cy, x-state.cx) + Math.PI) * 16 / (2*Math.PI)) % 16;
+    return s &lt; 0 ? s + 16 : s;
+  }
+  function pointAtSector(s, offset=0, radial=0) {
+    const a = -Math.PI + (s + 0.5 + offset) * 2*Math.PI/16;
+    return { x: state.cx + (state.radius + radial)*Math.cos(a), y: state.cy + (state.radius + radial)*Math.sin(a) };
+  }
+  function isSectorVisible(s) {
+    const half = Math.PI/16;
+    const mid = -Math.PI + (s+0.5)*2*Math.PI/16;
+    const angles = [mid-half, mid, mid+half];
+    for (let a=0; a&lt;2*Math.PI; a+=Math.PI/2) {
+      let d = Math.atan2(Math.sin(a-mid), Math.cos(a-mid));
+      if (Math.abs(d) &lt;= half + 1e-9) angles.push(a);
+    }
+    const rout = state.radius + state.tolerance;
+    return angles.every(a =&gt; {
+      const x = state.cx + rout*Math.cos(a), y = state.cy + rout*Math.sin(a);
+      return x &gt;= 0 &amp;&amp; x &lt;= 127 &amp;&amp; y &gt;= 0 &amp;&amp; y &lt;= 127;
+    });
+  }
+  function addEvent(x,y,c=brushDir,w=brushWeight) {
+    const ev = {id: nextId++, x: clamp(x,0,127), y: clamp(y,0,127), c:+c, w:+w};
+    events.push(ev); selectedId = ev.id; return ev;
+  }
+  function generatePreset(name) {
+    events = []; selectedId = null; nextId = 1; preset = name;
+    for (let s=0; s&lt;16; s++) {
+      if ((name === &quot;occluded&quot; || name === &quot;mixed&quot; || name === &quot;missing6&quot; || name === &quot;sparse&quot;) &amp;&amp; s === 12) continue;
+      if (name === &quot;missing6&quot; &amp;&amp; s === 6) continue;
+      let count = name === &quot;sparse&quot; ? 2 : (special26.has(s) ? 10 : 6);
+      for (let i=0; i&lt;count; i++) {
+        const off = (i + 0.5)/count - 0.5;
+        const radial = ((i % 3)-1)*0.65;
+        const p = pointAtSector(s, off*0.82, radial);
+        let c = s % 4;
+        if (s === 2) c = 2;
+        if (s === 6) c = 3;
+        if (name === &quot;mixed&quot; &amp;&amp; special26.has(s)) c = i % 4;
+        addEvent(p.x,p.y,c, 0.85 + (i%4)*0.05);
+      }
+    }
+    selectedId = null;
+    update();
+  }
+  function calculate(alpha=state.alpha, lambda=state.lambda) {
+    const hist = Array.from({length:16}, () =&gt; [0,0,0,0]);
+    const count = Array(16).fill(0);
+    const ring = [];
+    events.forEach(e =&gt; {
+      const d = Math.hypot(e.x-state.cx, e.y-state.cy);
+      if (Math.abs(d-state.radius) &lt;= state.tolerance) {
+        const s = sectorOf(e.x,e.y);
+        count[s]++; hist[s][e.c] += e.w; ring.push({...e, sector:s});
+      }
+    });
+    const mass = hist.map(h =&gt; d3.sum(h));
+    const purity = mass.map((m,s) =&gt; m &gt; 0 ? d3.max(hist[s])/m : 0);
+    const q = (s) =&gt; Math.min(1, count[s]/state.nmin, mass[s]/state.wmin);
+    const q2=q(2), q6=q(6), p2=purity[2], p6=purity[6];
+    const r2=q2*p2, r6=q6*p6, R=Math.min(r2,r6);
+    const emptyLower = [11,12,13].filter(s =&gt; isSectorVisible(s) &amp;&amp; count[s]===0);
+    const E = emptyLower.length ? 1 : 0;
+    const kOther = d3.range(16).filter(s =&gt; !lower.has(s) &amp;&amp; mass[s] &gt;= state.minSectorWeight).length;
+    const B = Math.min(1, kOther/state.kmin);
+    const G = Math.min(q2,q6,B);
+    const O = 1 + alpha*E*G;
+    const D = Math.exp(-lambda*(1-R));
+    const confidence = clamp(state.full*O*D,0,1);
+    return {hist,count,mass,purity,ring,q2,q6,p2,p6,r2,r6,R,emptyLower,E,kOther,B,G,O,D,confidence};
+  }
+
+  const eventSvg = d3.select($(&quot;#xr-event-svg&quot;));
+  function drawCanvas(calc) {
+    const w = Math.max(330, widths.canvas);
+    const h = Math.min(600, Math.max(390, w*0.9));
+    const m = {t:18,r:18,b:40,l:42};
+    const size = Math.min(w-m.l-m.r, h-m.t-m.b);
+    const ox = m.l + Math.max(0,(w-m.l-m.r-size)/2);
+    const oy = m.t;
+    const x = d3.scaleLinear().domain([0,127]).range([ox,ox+size]);
+    const y = d3.scaleLinear().domain([0,127]).range([oy,oy+size]);
+    eventSvg.attr(&quot;viewBox&quot;,&quot;0 0 &quot;+w+&quot; &quot;+h).attr(&quot;height&quot;,h);
+    eventSvg.selectAll(&quot;*&quot;).remove();
+    const g = eventSvg.append(&quot;g&quot;);
+    g.append(&quot;rect&quot;).attr(&quot;x&quot;,x(0)).attr(&quot;y&quot;,y(0)).attr(&quot;width&quot;,size).attr(&quot;height&quot;,size)
+      .attr(&quot;fill&quot;,css(&quot;--card&quot;)).attr(&quot;stroke&quot;,css(&quot;--border&quot;)).style(&quot;cursor&quot;,&quot;crosshair&quot;)
+      .on(&quot;pointerdown&quot;, (ev) =&gt; {
+        const p=d3.pointer(ev,eventSvg.node());
+        if (p[0]&gt;=x(0)&amp;&amp;p[0]&lt;=x(127)&amp;&amp;p[1]&gt;=y(0)&amp;&amp;p[1]&lt;=y(127)) {
+          addEvent(x.invert(p[0]),y.invert(p[1])); preset=&quot;custom&quot;; update();
+        }
+      });
+    const grid = g.append(&quot;g&quot;).attr(&quot;aria-hidden&quot;,&quot;true&quot;);
+    d3.range(0,129,16).forEach(v =&gt; {
+      grid.append(&quot;line&quot;).attr(&quot;x1&quot;,x(v)).attr(&quot;x2&quot;,x(v)).attr(&quot;y1&quot;,y(0)).attr(&quot;y2&quot;,y(127)).attr(&quot;stroke&quot;,css(&quot;--border&quot;)).attr(&quot;opacity&quot;,0.45);
+      grid.append(&quot;line&quot;).attr(&quot;y1&quot;,y(v)).attr(&quot;y2&quot;,y(v)).attr(&quot;x1&quot;,x(0)).attr(&quot;x2&quot;,x(127)).attr(&quot;stroke&quot;,css(&quot;--border&quot;)).attr(&quot;opacity&quot;,0.45);
+    });
+    const rr = x(state.radius)-x(0), rt=x(state.tolerance)-x(0);
+    const arc = d3.arc().innerRadius(Math.max(0,rr-rt)).outerRadius(rr+rt);
+    [2,6,11,12,13].forEach(s =&gt; {
+      const start = -Math.PI + s*2*Math.PI/16;
+      g.append(&quot;path&quot;).attr(&quot;d&quot;,arc({startAngle:start+Math.PI/2,endAngle:start+2*Math.PI/16+Math.PI/2}))
+        .attr(&quot;transform&quot;,&quot;translate(&quot;+x(state.cx)+&quot;,&quot;+y(state.cy)+&quot;)&quot;)
+        .attr(&quot;fill&quot;,special26.has(s)?css(&quot;--purple&quot;):css(&quot;--orange&quot;)).attr(&quot;opacity&quot;,0.13);
+    });
+    d3.range(16).forEach(s =&gt; {
+      const a=-Math.PI+s*2*Math.PI/16;
+      g.append(&quot;line&quot;).attr(&quot;x1&quot;,x(state.cx)).attr(&quot;y1&quot;,y(state.cy))
+        .attr(&quot;x2&quot;,x(state.cx+(state.radius+state.tolerance+4)*Math.cos(a)))
+        .attr(&quot;y2&quot;,y(state.cy+(state.radius+state.tolerance+4)*Math.sin(a)))
+        .attr(&quot;stroke&quot;,css(&quot;--border&quot;)).attr(&quot;opacity&quot;,0.62).attr(&quot;stroke-dasharray&quot;,&quot;2,3&quot;);
+      const p=pointAtSector(s,0,state.tolerance+7);
+      g.append(&quot;text&quot;).attr(&quot;x&quot;,x(p.x)).attr(&quot;y&quot;,y(p.y)+3).attr(&quot;text-anchor&quot;,&quot;middle&quot;)
+        .attr(&quot;fill&quot;,special26.has(s)?css(&quot;--purple&quot;):lower.has(s)?css(&quot;--orange&quot;):css(&quot;--muted-foreground&quot;))
+        .attr(&quot;font-size&quot;,special26.has(s)||lower.has(s)?11:9).attr(&quot;font-weight&quot;,special26.has(s)||lower.has(s)?700:400).text(s);
+    });
+    g.append(&quot;circle&quot;).attr(&quot;cx&quot;,x(state.cx)).attr(&quot;cy&quot;,y(state.cy)).attr(&quot;r&quot;,rr)
+      .attr(&quot;fill&quot;,&quot;none&quot;).attr(&quot;stroke&quot;,css(&quot;--primary&quot;)).attr(&quot;stroke-width&quot;,2);
+    g.append(&quot;circle&quot;).attr(&quot;cx&quot;,x(state.cx)).attr(&quot;cy&quot;,y(state.cy)).attr(&quot;r&quot;,Math.max(0,rr-rt))
+      .attr(&quot;fill&quot;,&quot;none&quot;).attr(&quot;stroke&quot;,css(&quot;--primary&quot;)).attr(&quot;opacity&quot;,0.35).attr(&quot;stroke-dasharray&quot;,&quot;4,4&quot;);
+    g.append(&quot;circle&quot;).attr(&quot;cx&quot;,x(state.cx)).attr(&quot;cy&quot;,y(state.cy)).attr(&quot;r&quot;,rr+rt)
+      .attr(&quot;fill&quot;,&quot;none&quot;).attr(&quot;stroke&quot;,css(&quot;--primary&quot;)).attr(&quot;opacity&quot;,0.35).attr(&quot;stroke-dasharray&quot;,&quot;4,4&quot;);
+    g.append(&quot;line&quot;).attr(&quot;x1&quot;,x(state.cx)-5).attr(&quot;x2&quot;,x(state.cx)+5).attr(&quot;y1&quot;,y(state.cy)).attr(&quot;y2&quot;,y(state.cy)).attr(&quot;stroke&quot;,css(&quot;--foreground&quot;));
+    g.append(&quot;line&quot;).attr(&quot;y1&quot;,y(state.cy)-5).attr(&quot;y2&quot;,y(state.cy)+5).attr(&quot;x1&quot;,x(state.cx)).attr(&quot;x2&quot;,x(state.cx)).attr(&quot;stroke&quot;,css(&quot;--foreground&quot;));
+
+    const inRing = new Set(calc.ring.map(e=&gt;e.id));
+    const color = [css(&quot;--chart-1&quot;),css(&quot;--chart-2&quot;),css(&quot;--chart-3&quot;),css(&quot;--chart-4&quot;)];
+    const marks = g.append(&quot;g&quot;).selectAll(&quot;g.xr-event&quot;).data(events,d=&gt;d.id).join(&quot;g&quot;)
+      .attr(&quot;class&quot;,&quot;xr-event&quot;).attr(&quot;transform&quot;,d=&gt;&quot;translate(&quot;+x(d.x)+&quot;,&quot;+y(d.y)+&quot;)&quot;)
+      .style(&quot;cursor&quot;,&quot;grab&quot;).attr(&quot;opacity&quot;,d=&gt;inRing.has(d.id)?(0.34+0.66*d.w):0.17)
+      .on(&quot;pointerdown&quot;,(ev,d)=&gt;{
+        ev.stopPropagation(); selectedId=d.id; dragging=true; eventSvg.node().setPointerCapture(ev.pointerId); update();
+      })
+      .on(&quot;pointerenter&quot;,(ev,d)=&gt;showTip(ev,&quot;事件 #&quot;+d.id+&quot;&lt;br&gt;x=&quot;+fmt(d.x,1)+&quot;, y=&quot;+fmt(d.y,1)+&quot;&lt;br&gt;c=&quot;+d.c+&quot; &quot;+arrows[d.c]+&quot; · 权重=&quot;+fmt(d.w,2)+&quot;&lt;br&gt;&quot;+(inRing.has(d.id)?&quot;计入圆周证据&quot;:&quot;圆周带外，不计分&quot;)))
+      .on(&quot;pointermove&quot;,(ev)=&gt;moveTip(ev))
+      .on(&quot;pointerleave&quot;,hideTip);
+    marks.append(&quot;circle&quot;).attr(&quot;r&quot;,d=&gt;d.id===selectedId?4.8:3.6).attr(&quot;fill&quot;,d=&gt;color[d.c])
+      .attr(&quot;stroke&quot;,d=&gt;d.id===selectedId?css(&quot;--foreground&quot;):css(&quot;--background&quot;)).attr(&quot;stroke-width&quot;,d=&gt;d.id===selectedId?2:0.8);
+    marks.append(&quot;line&quot;).attr(&quot;x1&quot;,d=&gt;-dirVec[d.c][0]*3).attr(&quot;y1&quot;,d=&gt;-dirVec[d.c][1]*3)
+      .attr(&quot;x2&quot;,d=&gt;dirVec[d.c][0]*4.5).attr(&quot;y2&quot;,d=&gt;dirVec[d.c][1]*4.5)
+      .attr(&quot;stroke&quot;,css(&quot;--background&quot;)).attr(&quot;stroke-width&quot;,1.15).attr(&quot;stroke-linecap&quot;,&quot;round&quot;);
+    marks.append(&quot;circle&quot;).attr(&quot;r&quot;,9).attr(&quot;fill&quot;,&quot;transparent&quot;);
+    eventSvg.on(&quot;pointermove.drag&quot;,(ev)=&gt;{
+      if (!dragging || selectedId===null) return;
+      const p=d3.pointer(ev,eventSvg.node()), d=events.find(e=&gt;e.id===selectedId);
+      if (d) { d.x=clamp(x.invert(p[0]),0,127); d.y=clamp(y.invert(p[1]),0,127); preset=&quot;custom&quot;; update(); }
+    }).on(&quot;pointerup.drag pointercancel.drag&quot;,()=&gt;dragging=false);
+    g.append(&quot;g&quot;).attr(&quot;transform&quot;,&quot;translate(0,&quot;+y(127)+&quot;)&quot;).call(d3.axisBottom(x).ticks(5))
+      .call(s=&gt;s.selectAll(&quot;text&quot;).attr(&quot;fill&quot;,css(&quot;--muted-foreground&quot;))).call(s=&gt;s.selectAll(&quot;line,path&quot;).attr(&quot;stroke&quot;,css(&quot;--border&quot;)));
+    g.append(&quot;g&quot;).attr(&quot;transform&quot;,&quot;translate(&quot;+x(0)+&quot;,0)&quot;).call(d3.axisLeft(y).ticks(5))
+      .call(s=&gt;s.selectAll(&quot;text&quot;).attr(&quot;fill&quot;,css(&quot;--muted-foreground&quot;))).call(s=&gt;s.selectAll(&quot;line,path&quot;).attr(&quot;stroke&quot;,css(&quot;--border&quot;)));
+    g.append(&quot;text&quot;).attr(&quot;x&quot;,x(63.5)).attr(&quot;y&quot;,h-5).attr(&quot;text-anchor&quot;,&quot;middle&quot;).attr(&quot;font-size&quot;,11).attr(&quot;fill&quot;,css(&quot;--muted-foreground&quot;)).text(&quot;x [pixel]&quot;);
+    g.append(&quot;text&quot;).attr(&quot;transform&quot;,&quot;translate(12 &quot;+y(63.5)+&quot;) rotate(-90)&quot;).attr(&quot;text-anchor&quot;,&quot;middle&quot;).attr(&quot;font-size&quot;,11).attr(&quot;fill&quot;,css(&quot;--muted-foreground&quot;)).text(&quot;y [pixel]&quot;);
+  }
+
+  function drawSectorChart(calc) {
+    const svg=d3.select($(&quot;#xr-sector-svg&quot;)), w=Math.max(330,widths.sector), h=250, m={t:10,r:12,b:34,l:38};
+    svg.attr(&quot;viewBox&quot;,&quot;0 0 &quot;+w+&quot; &quot;+h).attr(&quot;height&quot;,h); svg.selectAll(&quot;*&quot;).remove();
+    const x=d3.scaleBand().domain(d3.range(16)).range([m.l,w-m.r]).padding(0.16);
+    const ymax=Math.max(4,d3.max(calc.mass)||0);
+    const y=d3.scaleLinear().domain([0,ymax*1.12]).nice().range([h-m.b,m.t]);
+    const color=[css(&quot;--chart-1&quot;),css(&quot;--chart-2&quot;),css(&quot;--chart-3&quot;),css(&quot;--chart-4&quot;)];
+    [2,6,11,12,13].forEach(s=&gt;svg.append(&quot;rect&quot;).attr(&quot;x&quot;,x(s)-2).attr(&quot;y&quot;,m.t).attr(&quot;width&quot;,x.bandwidth()+4).attr(&quot;height&quot;,h-m.t-m.b)
+      .attr(&quot;fill&quot;,special26.has(s)?css(&quot;--purple&quot;):css(&quot;--orange&quot;)).attr(&quot;opacity&quot;,0.08));
+    const stack=d3.stack().keys(d3.range(4))(calc.hist.map((hh,s)=&gt;({s,&quot;0&quot;:hh[0],&quot;1&quot;:hh[1],&quot;2&quot;:hh[2],&quot;3&quot;:hh[3]})));
+    svg.append(&quot;g&quot;).selectAll(&quot;g&quot;).data(stack).join(&quot;g&quot;).attr(&quot;fill&quot;,d=&gt;color[d.key]).selectAll(&quot;rect&quot;).data(d=&gt;d).join(&quot;rect&quot;)
+      .attr(&quot;x&quot;,(d,i)=&gt;x(i)).attr(&quot;y&quot;,d=&gt;y(d[1])).attr(&quot;height&quot;,d=&gt;Math.max(0,y(d[0])-y(d[1]))).attr(&quot;width&quot;,x.bandwidth())
+      .on(&quot;pointerenter&quot;,(ev,d)=&gt;{const s=d.data.s;showTip(ev,&quot;扇区 &quot;+s+&quot;&lt;br&gt;n=&quot;+calc.count[s]+&quot; · W=&quot;+fmt(calc.mass[s],2)+&quot;&lt;br&gt;p=&quot;+(calc.mass[s]&gt;0?fmt(calc.purity[s],3):&quot;无事件&quot;))})
+      .on(&quot;pointermove&quot;,moveTip).on(&quot;pointerleave&quot;,hideTip);
+    svg.append(&quot;g&quot;).attr(&quot;transform&quot;,&quot;translate(0,&quot;+(h-m.b)+&quot;)&quot;).call(d3.axisBottom(x).tickSizeOuter(0))
+      .call(g=&gt;g.selectAll(&quot;text&quot;).attr(&quot;fill&quot;,d=&gt;special26.has(d)?css(&quot;--purple&quot;):lower.has(d)?css(&quot;--orange&quot;):css(&quot;--muted-foreground&quot;)).attr(&quot;font-weight&quot;,d=&gt;special26.has(d)||lower.has(d)?700:400))
+      .call(g=&gt;g.selectAll(&quot;line,path&quot;).attr(&quot;stroke&quot;,css(&quot;--border&quot;)));
+    svg.append(&quot;g&quot;).attr(&quot;transform&quot;,&quot;translate(&quot;+m.l+&quot;,0)&quot;).call(d3.axisLeft(y).ticks(4))
+      .call(g=&gt;g.selectAll(&quot;text&quot;).attr(&quot;fill&quot;,css(&quot;--muted-foreground&quot;))).call(g=&gt;g.selectAll(&quot;line,path&quot;).attr(&quot;stroke&quot;,css(&quot;--border&quot;)));
+  }
+
+  function drawHeat(calc) {
+    const svg=d3.select($(&quot;#xr-heat-svg&quot;)), w=Math.max(330,widths.heat), h=250, m={t:10,r:16,b:38,l:42};
+    svg.attr(&quot;viewBox&quot;,&quot;0 0 &quot;+w+&quot; &quot;+h).attr(&quot;height&quot;,h); svg.selectAll(&quot;*&quot;).remove();
+    const A=d3.range(0,1.0001,0.05), L=d3.range(0,4.0001,0.1);
+    const cells=[]; A.forEach(a=&gt;L.forEach(l=&gt;cells.push({a,l,c:calculate(a,l).confidence})));
+    const x=d3.scaleLinear().domain([0,1.05]).range([m.l,w-m.r]), y=d3.scaleLinear().domain([4.1,0]).range([h-m.b,m.t]);
+    const cw=Math.max(1,x(0.05)-x(0)), ch=Math.max(1,y(0)-y(0.1));
+    svg.append(&quot;g&quot;).selectAll(&quot;rect&quot;).data(cells).join(&quot;rect&quot;).attr(&quot;x&quot;,d=&gt;x(d.a)).attr(&quot;y&quot;,d=&gt;y(d.l))
+      .attr(&quot;width&quot;,cw+0.2).attr(&quot;height&quot;,ch+0.2).attr(&quot;fill&quot;,css(&quot;--chart-1&quot;)).attr(&quot;opacity&quot;,d=&gt;0.06+0.92*d.c)
+      .on(&quot;pointerenter&quot;,(ev,d)=&gt;showTip(ev,&quot;α=&quot;+d.a.toFixed(2)+&quot; · λ=&quot;+d.l.toFixed(1)+&quot;&lt;br&gt;C_xiaoiron=&quot;+d.c.toFixed(3)))
+      .on(&quot;pointermove&quot;,moveTip).on(&quot;pointerleave&quot;,hideTip);
+    svg.append(&quot;circle&quot;).attr(&quot;cx&quot;,x(state.alpha)).attr(&quot;cy&quot;,y(state.lambda)+ch/2).attr(&quot;r&quot;,5)
+      .attr(&quot;fill&quot;,css(&quot;--background&quot;)).attr(&quot;stroke&quot;,css(&quot;--foreground&quot;)).attr(&quot;stroke-width&quot;,2);
+    svg.append(&quot;g&quot;).attr(&quot;transform&quot;,&quot;translate(0,&quot;+(h-m.b)+&quot;)&quot;).call(d3.axisBottom(x).tickValues([0,.25,.5,.75,1]).tickFormat(d3.format(&quot;.2~f&quot;)))
+      .call(g=&gt;g.selectAll(&quot;text&quot;).attr(&quot;fill&quot;,css(&quot;--muted-foreground&quot;))).call(g=&gt;g.selectAll(&quot;line,path&quot;).attr(&quot;stroke&quot;,css(&quot;--border&quot;)));
+    svg.append(&quot;g&quot;).attr(&quot;transform&quot;,&quot;translate(&quot;+m.l+&quot;,0)&quot;).call(d3.axisLeft(y).tickValues([0,1,2,3,4]))
+      .call(g=&gt;g.selectAll(&quot;text&quot;).attr(&quot;fill&quot;,css(&quot;--muted-foreground&quot;))).call(g=&gt;g.selectAll(&quot;line,path&quot;).attr(&quot;stroke&quot;,css(&quot;--border&quot;)));
+    svg.append(&quot;text&quot;).attr(&quot;x&quot;,(m.l+w-m.r)/2).attr(&quot;y&quot;,h-4).attr(&quot;text-anchor&quot;,&quot;middle&quot;).attr(&quot;font-size&quot;,11).attr(&quot;fill&quot;,css(&quot;--muted-foreground&quot;)).text(&quot;α&quot;);
+    svg.append(&quot;text&quot;).attr(&quot;transform&quot;,&quot;translate(12 &quot;+((m.t+h-m.b)/2)+&quot;) rotate(-90)&quot;).attr(&quot;text-anchor&quot;,&quot;middle&quot;).attr(&quot;font-size&quot;,11).attr(&quot;fill&quot;,css(&quot;--muted-foreground&quot;)).text(&quot;λ&quot;);
+  }
+
+  function showTip(ev,html) {
+    const tip=$(&quot;#xr-canvas-tip&quot;); tip.innerHTML=html; tip.style.opacity=1; moveTip(ev);
+  }
+  function moveTip(ev) {
+    const tip=$(&quot;#xr-canvas-tip&quot;), r=root.getBoundingClientRect();
+    tip.style.left=(ev.clientX-r.left+12)+&quot;px&quot;; tip.style.top=(ev.clientY-r.top+12)+&quot;px&quot;;
+  }
+  function hideTip(){ $(&quot;#xr-canvas-tip&quot;).style.opacity=0; }
+
+  function updateSelectionControls() {
+    const select=$(&quot;#xr-event-list&quot;), current=events.find(e=&gt;e.id===selectedId);
+    select.innerHTML=&#x27;&lt;option value=&quot;&quot;&gt;未选中（点击画布添加）&lt;/option&gt;&#x27;+events.map(e=&gt;&#x27;&lt;option value=&quot;&#x27;+e.id+&#x27;&quot;&gt;#&#x27;+e.id+&#x27; · s&#x27;+sectorOf(e.x,e.y)+&#x27; · c&#x27;+e.c+&#x27; &#x27;+arrows[e.c]+&#x27;&lt;/option&gt;&#x27;).join(&quot;&quot;);
+    select.value=current?String(current.id):&quot;&quot;;
+    $(&quot;#xr-event-count&quot;).textContent=events.length+&quot; 个&quot;;
+    [&quot;#xr-event-x&quot;,&quot;#xr-event-y&quot;].forEach(s=&gt;$(s).disabled=!current);
+    $(&quot;#xr-delete&quot;).disabled=!current;
+    if(current) {
+      $(&quot;#xr-event-x&quot;).value=current.x.toFixed(1); $(&quot;#xr-event-y&quot;).value=current.y.toFixed(1);
+      brushDir=current.c; brushWeight=current.w;
+      $(&quot;#xr-direction&quot;).value=current.c; $(&quot;#xr-weight&quot;).value=current.w;
+    }
+    $(&quot;#xr-direction-out&quot;).textContent=brushDir+&quot; &quot;+arrows[brushDir];
+    $(&quot;#xr-weight-out&quot;).textContent=Number(brushWeight).toFixed(2);
+  }
+  function update() {
+    const calc=calculate();
+    $(&quot;#xr-confidence&quot;).textContent=fmt(calc.confidence,3);
+    $(&quot;#xr-r&quot;).textContent=fmt(calc.R,3);
+    $(&quot;#xr-factor&quot;).textContent=fmt(calc.O*calc.D,3);
+    [&quot;n&quot;,&quot;w&quot;,&quot;q&quot;,&quot;p&quot;,&quot;r&quot;].forEach(k=&gt;[2,6].forEach(s=&gt;{
+      let v=k===&quot;n&quot;?calc.count[s]:k===&quot;w&quot;?calc.mass[s]:calc[k+s];
+      $(&quot;#xr-&quot;+k+s).textContent=k===&quot;n&quot;?v:(k===&quot;p&quot;&amp;&amp;calc.count[s]===0?&quot;无事件&quot;:fmt(v,k===&quot;w&quot;?2:3));
+    }));
+    $(&quot;#xr-equation&quot;).textContent =
+      &quot;E=&quot;+calc.E+&quot; · empty={&quot;+(calc.emptyLower.join(&quot;,&quot;)||&quot;∅&quot;)+&quot;} · B=&quot;+fmt(calc.B)+&quot; · G=&quot;+fmt(calc.G)+
+      &quot; · O=&quot;+fmt(calc.O)+&quot; · D=&quot;+fmt(calc.D)+&quot; → clip(&quot;+fmt(state.full,2)+&quot; × &quot;+fmt(calc.O)+&quot; × &quot;+fmt(calc.D)+&quot;) = &quot;+fmt(calc.confidence);
+    $(&quot;#xr-live-status&quot;).textContent=&quot;圆周带内 &quot;+calc.ring.length+&quot;/&quot;+events.length+&quot; 个事件；其他扇区覆盖 K_other=&quot;+calc.kOther+
+      &quot;；扇区 11/12/13 完整可见=&quot;+[11,12,13].filter(isSectorVisible).join(&quot;、&quot;);
+    updateSelectionControls();
+    drawCanvas(calc); drawSectorChart(calc); drawHeat(calc);
+    $$(&quot;[data-preset]&quot;).forEach(b=&gt;b.dataset.active=String(b.dataset.preset===preset));
+  }
+
+  $$(&quot;[data-preset]&quot;).forEach(b=&gt;b.addEventListener(&quot;click&quot;,()=&gt;generatePreset(b.dataset.preset)));
+  $(&quot;#xr-clear&quot;).addEventListener(&quot;click&quot;,()=&gt;{events=[];selectedId=null;preset=&quot;custom&quot;;update();});
+  $(&quot;#xr-refit&quot;).addEventListener(&quot;click&quot;,()=&gt;{
+    events.forEach(e=&gt;{const a=Math.atan2(e.y-state.cy,e.x-state.cx);e.x=state.cx+state.radius*Math.cos(a);e.y=state.cy+state.radius*Math.sin(a);});
+    preset=&quot;custom&quot;; update();
+  });
+  $(&quot;#xr-event-list&quot;).addEventListener(&quot;change&quot;,e=&gt;{selectedId=e.target.value?+e.target.value:null;update();});
+  $(&quot;#xr-event-x&quot;).addEventListener(&quot;input&quot;,e=&gt;{const d=events.find(v=&gt;v.id===selectedId);if(d){d.x=clamp(+e.target.value,0,127);preset=&quot;custom&quot;;update();}});
+  $(&quot;#xr-event-y&quot;).addEventListener(&quot;input&quot;,e=&gt;{const d=events.find(v=&gt;v.id===selectedId);if(d){d.y=clamp(+e.target.value,0,127);preset=&quot;custom&quot;;update();}});
+  $(&quot;#xr-direction&quot;).addEventListener(&quot;change&quot;,e=&gt;{brushDir=+e.target.value;const d=events.find(v=&gt;v.id===selectedId);if(d)d.c=brushDir;preset=&quot;custom&quot;;update();});
+  $(&quot;#xr-weight&quot;).addEventListener(&quot;input&quot;,e=&gt;{brushWeight=+e.target.value;const d=events.find(v=&gt;v.id===selectedId);if(d)d.w=brushWeight;preset=&quot;custom&quot;;update();});
+  $(&quot;#xr-delete&quot;).addEventListener(&quot;click&quot;,()=&gt;{events=events.filter(e=&gt;e.id!==selectedId);selectedId=null;preset=&quot;custom&quot;;update();});
+  $(&quot;#xr-deselect&quot;).addEventListener(&quot;click&quot;,()=&gt;{selectedId=null;update();});
+
+  let resizeTimer;
+  const ro=new ResizeObserver(()=&gt;{
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(()=&gt;{
+      widths.canvas=$(&quot;.xr-canvas-wrap&quot;).clientWidth;
+      widths.sector=$(&quot;#xr-sector-svg&quot;).parentElement.clientWidth;
+      widths.heat=$(&quot;#xr-heat-svg&quot;).parentElement.clientWidth;
+      update();
+    },80);
+  });
+  ro.observe(root);
+  generatePreset(&quot;occluded&quot;);
+})();
+&lt;/script&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+  let lastPointerWasTouch = false;
+  let pinnedByTouch = false;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    pinnedByTouch = false;
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handlePointer = (event) =&gt; {
+    lastPointerWasTouch =
+      event.type === &quot;pointerdown&quot; &amp;&amp; event.pointerType === &quot;touch&quot;;
+  };
+  const handleTouchClick = (event) =&gt; {
+    const isTouch = event.pointerType === &quot;touch&quot; || lastPointerWasTouch;
+    lastPointerWasTouch = false;
+    if (!isTouch || event.detail === 0) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (
+      trigger == null ||
+      !trigger.isConnected ||
+      getContent(trigger).length === 0 ||
+      (pinnedByTouch &amp;&amp; activeTrigger === trigger)
+    ) {
+      if (pinnedByTouch) {
+        closeTooltip();
+      }
+      return;
+    }
+    openTooltip(trigger);
+    pinnedByTouch = activeTrigger === trigger;
+    window.setTimeout(() =&gt; {
+      if (activeTrigger === trigger &amp;&amp; !trigger.isConnected) {
+        closeTooltip(false);
+      }
+    }, 0);
+  };
+  const handleLeave = (event) =&gt; {
+    if (pinnedByTouch) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    lastPointerWasTouch = false;
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    lastPointerWasTouch = false;
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerdown&quot;, handlePointer);
+    document.removeEventListener(&quot;pointercancel&quot;, handlePointer);
+    document.removeEventListener(&quot;click&quot;, handleTouchClick);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerdown&quot;, handlePointer);
+  document.addEventListener(&quot;pointercancel&quot;, handlePointer);
+  document.addEventListener(&quot;click&quot;, handleTouchClick);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-tabs&quot;&gt;
+(() =&gt; {
+  const selector = &#x27;.nav[role=&quot;tablist&quot;] [role=&quot;tab&quot;]&#x27;;
+  const disabled = &#x27;:disabled,[aria-disabled=&quot;true&quot;]&#x27;;
+  const selectTab = (selected) =&gt; {
+    const panelId = selected.getAttribute(&quot;aria-controls&quot;);
+    for (const tab of selected.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;)) {
+      const active = tab === selected;
+      tab.classList.toggle(&quot;active&quot;, active);
+      tab.setAttribute(&quot;aria-selected&quot;, String(active));
+      const id = tab.getAttribute(&quot;aria-controls&quot;);
+      const panel = id &amp;&amp; document.getElementById(id);
+      if (panel != null) {
+        panel.hidden = id !== panelId;
+        if (!panel.hidden &amp;&amp; selected.id) {
+          panel.setAttribute(&quot;aria-labelledby&quot;, selected.id);
+        }
+      }
+    }
+  };
+  const interact = (event) =&gt; {
+    const tab = event.target?.closest?.(selector);
+    if (event.defaultPrevented || tab == null || tab.matches(disabled)) {
+      return;
+    }
+    if (event.type === &quot;click&quot;) {
+      selectTab(tab);
+      return;
+    }
+    const tabs = Array.from(
+      tab.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;),
+    ).filter((candidate) =&gt; !candidate.matches(disabled));
+    const current = tabs.indexOf(tab);
+    let next;
+    if (event.key === &quot;ArrowRight&quot; || event.key === &quot;ArrowDown&quot;) {
+      next = (current + 1) % tabs.length;
+    } else if (event.key === &quot;ArrowLeft&quot; || event.key === &quot;ArrowUp&quot;) {
+      next = (current + tabs.length - 1) % tabs.length;
+    } else if (event.key === &quot;Home&quot;) {
+      next = 0;
+    } else if (event.key === &quot;End&quot;) {
+      next = tabs.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    tabs[next].focus();
+    selectTab(tabs[next]);
+  };
+
+  for (const list of document.querySelectorAll(&#x27;.nav[role=&quot;tablist&quot;]&#x27;)) {
+    const selected =
+      list.querySelector(&#x27;[role=&quot;tab&quot;][aria-selected=&quot;true&quot;]&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;].active&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;]&#x27;);
+    if (selected != null) {
+      selectTab(selected);
+    }
+  }
+  document.addEventListener(&quot;click&quot;, interact);
+  document.addEventListener(&quot;keydown&quot;, interact);
+  window.addEventListener(&quot;pagehide&quot;, () =&gt; {
+    document.removeEventListener(&quot;click&quot;, interact);
+    document.removeEventListener(&quot;keydown&quot;, interact);
+  }, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>

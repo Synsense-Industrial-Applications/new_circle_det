@@ -1,0 +1,30 @@
+# Python bytecode and test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter temporary files
+.ipynb_checkpoints/
+
+# Rebuildable detector caches
+*.circle_cache_v*.npz
+*.circle_cache.npz
+
+# Local UI state and editor/OS files
+imgui.ini
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local backup files
+.backup_before_*/
+*.bak
+*~
