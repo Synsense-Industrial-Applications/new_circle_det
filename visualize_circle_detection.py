@@ -57,6 +57,7 @@ from circle_detection.xiaoiron_confidence import (  # noqa: E402
     calculate_xiaoiron_confidence,
 )
 from four_region_flow import FlowData, load_flow_csv  # noqa: E402
+from runtime_performance_log import RuntimePerformanceLogger  # noqa: E402
 
 
 DEFAULT_CSV = SCRIPT_DIR / "layer4_20260727_155031_part0001.csv"
@@ -725,6 +726,7 @@ class DSCTEventPlayer:
         score_radial_tolerance_px: float = 2.5,
         score_update_interval_events: int = 6,
         display_event_limit: int = 300,
+        performance_logger: Optional[RuntimePerformanceLogger] = None,
     ) -> None:
         if confidence_metric not in ("confidence", "xiaoiron_confidence"):
             raise ValueError("confidence_metric must be confidence or xiaoiron_confidence")
@@ -737,6 +739,9 @@ class DSCTEventPlayer:
         self._updating_xiaoiron_controls = False
         self.data = data
         self.events = events
+        self.performance_logger = performance_logger
+        self._performance_pending_tick_started_s: Optional[float] = None
+        self._last_visible_event_count = 0
         if precomputed.event_count != len(events):
             raise ValueError("precomputed detection count does not match event count")
         self.precomputed = precomputed
@@ -833,6 +838,13 @@ class DSCTEventPlayer:
         self.figure.canvas.mpl_connect(
             "button_release_event", self._on_mouse_button_release
         )
+        if self.performance_logger is not None:
+            self.figure.canvas.mpl_connect(
+                "draw_event", self._on_performance_draw
+            )
+            self.figure.canvas.mpl_connect(
+                "close_event", lambda _event: self.performance_logger.flush()
+            )
 
         self.strict_detection: Optional[PlaybackCircle] = None
         self.adaptive_detection: Optional[PlaybackCircle] = None
@@ -1237,6 +1249,8 @@ class DSCTEventPlayer:
         if new_window == self.score_window_events:
             self._score_window_dirty = False
             return
+        old_window = self.score_window_events
+        score_rebuild_started = time.perf_counter()
         was_playing = self.playing
         self._set_playing(False)
         self.score_window_slider.valtext.set_text(f"{new_window} computing...")
@@ -1262,6 +1276,12 @@ class DSCTEventPlayer:
                 self._refresh_current_detections()
                 self._render()
         finally:
+            if self.performance_logger is not None:
+                self.performance_logger.record_stage(
+                    "score_window_rebuild",
+                    (time.perf_counter() - score_rebuild_started) * 1000.0,
+                    f"{old_window}->{new_window}",
+                )
             if was_playing:
                 self._set_playing(True)
             self._reanchor_clock()
@@ -1776,6 +1796,7 @@ class DSCTEventPlayer:
         x = self.data.x[active]
         y = self.data.y[active]
         code = self.data.direction[active]
+        self._last_visible_event_count = len(x)
         event_age_us = self.playhead_timestamp_us - self.timestamps[active]
         alpha = np.clip(np.exp(-event_age_us / self.fade_tau_us), 0.015, 1.0)
         if len(x):
@@ -1904,6 +1925,9 @@ class DSCTEventPlayer:
     def _timer_tick(self, _frame_number: int) -> list[object]:
         if not self.playing:
             return []
+        tick_started = time.perf_counter()
+        previous_index = self.index
+        self._performance_pending_tick_started_s = tick_started
         # The wall clock determines the source timestamp to display. Dense
         # bursts therefore contribute many events in one rendered frame,
         # while timestamp gaps remain visible as real pauses. Rendering still
@@ -1917,10 +1941,51 @@ class DSCTEventPlayer:
         if wrapped:
             self._reanchor_clock()
 
+        render_started = time.perf_counter()
         artists = self._render()
+        render_update_ms = (time.perf_counter() - render_started) * 1000.0
+        finished = time.perf_counter()
+        if self.performance_logger is not None:
+            if wrapped:
+                events_advanced = (
+                    self.loop_end_index - previous_index
+                    + self.index - self.loop_start_index + 1
+                )
+            else:
+                events_advanced = max(0, self.index - previous_index)
+            self.performance_logger.record_tick(
+                now_s=finished,
+                event_number=self.index + 1,
+                source_timestamp_us=float(self.timestamps[self.index]),
+                source_relative_s=(
+                    float(self.timestamps[self.index]) - self.first_timestamp
+                ) * 1e-6,
+                events_advanced=events_advanced,
+                target_lag_us=(
+                    target_timestamp_us - float(self.timestamps[self.index])
+                ),
+                visible_events=self._last_visible_event_count,
+                callback_ms=(finished - tick_started) * 1000.0,
+                render_update_ms=render_update_ms,
+                playback_speed=self.playback_speed,
+                timer_interval_ms=self.interval_ms,
+                score_window_events=self.score_window_events,
+            )
         if not self.loop_enabled and self.playhead_timestamp_us >= self.timestamps[-1]:
             self._set_playing(False)
         return artists
+
+    def _on_performance_draw(self, _event=None) -> None:
+        if self.performance_logger is None or self.index < 0:
+            return
+        now_s = time.perf_counter()
+        self.performance_logger.record_draw(
+            now_s=now_s,
+            event_number=self.index + 1,
+            source_timestamp_us=float(self.timestamps[self.index]),
+            pending_tick_started_s=self._performance_pending_tick_started_s,
+        )
+        self._performance_pending_tick_started_s = None
 
     def _on_key(self, event) -> None:
         if event.key and event.key.lower() == "s":
@@ -2023,6 +2088,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="ignore and rebuild the precomputed detection cache",
     )
+    parser.add_argument(
+        "--performance-log",
+        type=Path,
+        default=Path("runtime_performance_log.csv"),
+        help="temporary CSV runtime log; relative paths are written beside this script",
+    )
     parser.add_argument("--no-show", action="store_true")
     return parser
 
@@ -2037,9 +2108,36 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     if not csv_path.is_file():
         raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
+    performance_logger = RuntimePerformanceLogger(
+        resolve_output(args.performance_log)
+    )
+    print(f"perf log: {performance_logger.path}")
+    stage_started = time.perf_counter()
     data = load_flow_csv(csv_path)
+    performance_logger.record_stage(
+        "csv_load", (time.perf_counter() - stage_started) * 1000.0
+    )
+    stage_started = time.perf_counter()
     events = to_flow_events(data)
+    performance_logger.record_stage(
+        "event_object_conversion",
+        (time.perf_counter() - stage_started) * 1000.0,
+    )
     strict_config, adaptive_config = make_configs()
+    performance_logger.record_metadata(
+        {
+            "csv": str(csv_path),
+            "events": len(events),
+            "duration_s": data.duration_s,
+            "interval_ms": args.interval_ms,
+            "playback_speed": args.playback_speed,
+            "trail_ms": args.trail_ms,
+            "fade_tau_ms": args.fade_tau_ms,
+            "history_events": args.history_events,
+            "strict_config": asdict(strict_config),
+            "adaptive_config": asdict(adaptive_config),
+        }
+    )
     print(f"source:   {csv_path}")
     print(f"events:   {len(events):,}")
     print(f"duration: {data.duration_s:.6f} s")
@@ -2052,17 +2150,33 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     signature = _cache_signature(
         csv_path, len(events), strict_config, adaptive_config
     )
+    stage_started = time.perf_counter()
     precomputed = None if args.rebuild_cache else load_precomputed_cache(
         cache_path, signature, len(events)
+    )
+    performance_logger.record_stage(
+        "cache_lookup",
+        (time.perf_counter() - stage_started) * 1000.0,
+        "miss/rebuild" if precomputed is None else "hit",
     )
     if precomputed is not None:
         print(f"cache:    loaded {cache_path}")
     else:
         print("cache:    computing all detections before playback")
+        stage_started = time.perf_counter()
         precomputed = precompute_detections(
             events, strict_config, adaptive_config, show_progress=True
         )
+        performance_logger.record_stage(
+            "precompute_detections",
+            (time.perf_counter() - stage_started) * 1000.0,
+            f"{len(events)} events",
+        )
+        stage_started = time.perf_counter()
         save_precomputed_cache(cache_path, signature, precomputed)
+        performance_logger.record_stage(
+            "cache_save", (time.perf_counter() - stage_started) * 1000.0
+        )
         print(f"cache:    saved {cache_path}")
 
     strict_scan: Optional[ScanResult] = None
@@ -2081,6 +2195,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         print_scan(adaptive_scan, events[0].t)
 
     if args.analyze and args.no_show and args.save_preview is None and args.save_gif is None:
+        performance_logger.close()
         return 0
 
     if args.save_preview is not None:
@@ -2106,6 +2221,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
             score_decay_events=adaptive_config.decay_events,
             score_radial_tolerance_px=adaptive_config.radial_tolerance_px,
             score_update_interval_events=adaptive_config.update_interval_events,
+            performance_logger=performance_logger,
         )
         player.seek_for_preview(preview_index, args.analysis_stride)
         output = resolve_output(args.save_preview)
@@ -2139,6 +2255,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
             score_decay_events=adaptive_config.decay_events,
             score_radial_tolerance_px=adaptive_config.radial_tolerance_px,
             score_update_interval_events=adaptive_config.update_interval_events,
+            performance_logger=performance_logger,
         )
         animation = FuncAnimation(
             player.figure,
@@ -2173,10 +2290,12 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
             score_decay_events=adaptive_config.decay_events,
             score_radial_tolerance_px=adaptive_config.radial_tolerance_px,
             score_update_interval_events=adaptive_config.update_interval_events,
+            performance_logger=performance_logger,
         )
         # Keep a live reference until the GUI closes.
         _ = player
         plt.show()
+    performance_logger.close()
     return 0
 
 
