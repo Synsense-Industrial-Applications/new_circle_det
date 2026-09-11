@@ -8,7 +8,7 @@ Only circles that pass every registered output filter are emitted.  Rejected
 candidates remain visible in terminal diagnostics so parameters can be tuned.
 """
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import multiprocessing
 from pathlib import Path
 import sys
@@ -42,6 +42,7 @@ from hit_replay import (  # noqa: E402
     SlidingEventWindow,
     format_hit_trigger,
 )
+from hardware_runtime_log import HardwareRuntimeLogger  # noqa: E402
 
 
 # ===========================================================================
@@ -134,6 +135,10 @@ class TerminalConfig:
 
 
 TERMINAL_CONFIG = TerminalConfig()
+
+# 临时实机诊断日志；分析完成后删除日志模块和 runtime_logger 钩子即可。
+RUNTIME_LOG_ROOT = PROJECT_ROOT / "runtime_logs"
+RUNTIME_LOG_EVENT_BUFFER_ROWS = 8192
 
 
 # ===========================================================================
@@ -889,7 +894,7 @@ def print_final_summary(pipeline, reporter, elapsed_sec):
 # 主流程
 # ===========================================================================
 
-def main():
+def _run_demo(runtime_logger):
     print_runtime_configuration()
 
     print("Configuring CNN pipeline...")
@@ -945,6 +950,9 @@ def main():
                 queued=queued,
                 dropped_clips=hit_replay_viewer.dropped_clips,
             )
+            runtime_logger.record_replay(
+                clip, queued, hit_replay_viewer.dropped_clips
+            )
 
     # Discard events left over from configuration.
     event_buffer.get_events()
@@ -957,12 +965,16 @@ def main():
     full_batches_interval = 0
     last_batch_size = 0
     previous_update_count = 0
+    stop_reason = "running"
 
     print("Detector ready. Press Ctrl+C to stop.")
+    runtime_logger.record_marker("detector_ready", "hardware event loop started")
 
     try:
         while True:
+            batch_log = runtime_logger.begin_batch()
             events = event_buffer.get_n_events(n=512, timeout=10)
+            batch_log.received(events)
 
             if events:
                 last_batch_size = len(events)
@@ -987,12 +999,14 @@ def main():
                     except (AttributeError, TypeError, ValueError) as error:
                         pipeline.stats.invalid_events += 1
                         reporter.record_invalid_event(error)
+                        batch_log.record_invalid(event, error)
                         continue
                     if HIT_REPLAY_CONFIG.enabled:
                         hit_event_window.push(flow_event)
                         dispatch_ready_replays()
                     update = pipeline.process_flow_event(flow_event)
                     if update is not None:
+                        batch_log.record_update(update)
                         reporter.record_update(update)
                         trigger = None
                         if HIT_REPLAY_CONFIG.enabled:
@@ -1013,8 +1027,14 @@ def main():
                                 )
                             if trigger is not None:
                                 reporter.record_hit(trigger)
+                                runtime_logger.record_hit(trigger)
                                 hit_event_window.arm(trigger)
                                 dispatch_ready_replays()
+                    batch_log.record_event(
+                        event, flow_event, pipeline.stats.source_events
+                    )
+
+            batch_log.processing_done()
 
             now = time.monotonic()
             rate_elapsed = now - rate_started
@@ -1032,6 +1052,7 @@ def main():
                         full_batches_interval / max(1, batches_interval)
                     ),
                 )
+                runtime_logger.record_rate_snapshot(reporter)
                 raw_events_interval = 0
                 layer4_events_interval = 0
                 batches_interval = 0
@@ -1040,9 +1061,26 @@ def main():
                 rate_started = now
 
             reporter.refresh()
+            batch_log.finish(pipeline.stats)
 
     except KeyboardInterrupt:
-        pass
+        stop_reason = "keyboard_interrupt"
+        runtime_logger.record_marker("stop_requested", "Ctrl+C")
+
+    except BaseException as error:
+        stop_reason = f"error:{type(error).__name__}"
+        runtime_logger.record_marker(
+            "event_loop_error",
+            f"{type(error).__name__}: {error}",
+            record_type="error",
+        )
+        runtime_logger.record_final_summary(
+            pipeline,
+            reporter,
+            elapsed_s=time.monotonic() - started,
+            stop_reason=stop_reason,
+        )
+        raise
 
     finally:
         reporter.flush()
@@ -1053,6 +1091,9 @@ def main():
                     clip,
                     queued=queued,
                     dropped_clips=hit_replay_viewer.dropped_clips,
+                )
+                runtime_logger.record_replay(
+                    clip, queued, hit_replay_viewer.dropped_clips
                 )
         hit_replay_viewer.close(timeout_sec=5.0)
         try:
@@ -1071,8 +1112,46 @@ def main():
         # Keep this reference intentional and explicit until all graphs stop.
         _ = device_input_route
 
-    print_final_summary(pipeline, reporter, time.monotonic() - started)
+    elapsed_sec = time.monotonic() - started
+    runtime_logger.record_final_summary(
+        pipeline, reporter, elapsed_s=elapsed_sec, stop_reason=stop_reason
+    )
+    print_final_summary(pipeline, reporter, elapsed_sec)
     print("Speck2f adaptive circle detector stopped.")
+
+
+def main():
+    runtime_logger = HardwareRuntimeLogger(
+        RUNTIME_LOG_ROOT,
+        event_buffer_rows=RUNTIME_LOG_EVENT_BUFFER_ROWS,
+    )
+    print(f"Runtime log session: {runtime_logger.session_dir}")
+    runtime_logger.record_metadata(
+        {
+            "entrypoint": str(Path(__file__).resolve()),
+            "argv": sys.argv,
+            "circle_filter_config": asdict(CIRCLE_FILTER_CONFIG),
+            "xiaoiron_confidence_config": asdict(XIAOIRON_CONFIDENCE_CONFIG),
+            "circle_detector_config": asdict(CIRCLE_DETECTOR_CONFIG),
+            "circle_filter_rules": [rule.name for rule in CIRCLE_FILTER_RULES],
+            "hit_replay_config": asdict(HIT_REPLAY_CONFIG),
+            "terminal_config": asdict(TERMINAL_CONFIG),
+            "layer4": layer_4,
+            "feature_to_direction": FEATURE_TO_DIRECTION,
+            "direction_angles_deg": DIRECTION_ANGLES_DEG,
+        }
+    )
+    try:
+        _run_demo(runtime_logger)
+    except BaseException as error:
+        runtime_logger.record_marker(
+            "fatal_error",
+            f"{type(error).__name__}: {error}",
+            record_type="error",
+        )
+        raise
+    finally:
+        runtime_logger.close()
 
 
 if __name__ == "__main__":

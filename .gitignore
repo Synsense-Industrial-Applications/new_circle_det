@@ -17,6 +17,9 @@ env/
 *.circle_cache_v*.npz
 *.circle_cache.npz
 
+# Temporary real-machine diagnostic sessions
+runtime_logs/
+
 # Local UI state and editor/OS files
 imgui.ini
 .idea/
