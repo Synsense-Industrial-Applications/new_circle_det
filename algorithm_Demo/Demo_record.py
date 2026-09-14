@@ -17,11 +17,19 @@ Controls:
 
 import csv
 from datetime import datetime
-import msvcrt
+import os
 from pathlib import Path
+import sys
 import time
 
 import samna
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import select
+    import termios
+    import tty
 
 # Import only the hardware/network objects from the user's current Demo.py.
 # Importing the module defines the network; it does not call Demo.main().
@@ -55,19 +63,57 @@ def _event_row(event):
     return tuple(int(getattr(event, name)) for name in CSV_COLUMNS)
 
 
-def _read_pressed_keys():
-    """Read currently pending console keys without blocking event capture."""
+class ConsoleKeyReader:
+    """Non-blocking, no-Enter key input for Windows and Linux terminals."""
 
-    keys = []
-    while msvcrt.kbhit():
-        key = msvcrt.getwch()
-        if key in ("\x00", "\xe0"):
-            # Consume the second byte of a Windows extended key.
-            if msvcrt.kbhit():
-                msvcrt.getwch()
-            continue
-        keys.append(key.lower())
-    return keys
+    def __init__(self):
+        self._stdin_fd = None
+        self._saved_terminal_settings = None
+
+    def start(self):
+        if os.name == "nt":
+            return
+        if not sys.stdin.isatty():
+            raise RuntimeError(
+                "Keyboard control requires an interactive terminal (TTY)."
+            )
+        self._stdin_fd = sys.stdin.fileno()
+        self._saved_terminal_settings = termios.tcgetattr(self._stdin_fd)
+        tty.setcbreak(self._stdin_fd)
+
+    def close(self):
+        if (
+            os.name != "nt"
+            and self._stdin_fd is not None
+            and self._saved_terminal_settings is not None
+        ):
+            termios.tcsetattr(
+                self._stdin_fd,
+                termios.TCSADRAIN,
+                self._saved_terminal_settings,
+            )
+            self._stdin_fd = None
+            self._saved_terminal_settings = None
+
+    def read_pressed_keys(self):
+        keys = []
+        if os.name == "nt":
+            while msvcrt.kbhit():
+                key = msvcrt.getwch()
+                if key in ("\x00", "\xe0"):
+                    # Consume the second byte of a Windows extended key.
+                    if msvcrt.kbhit():
+                        msvcrt.getwch()
+                    continue
+                keys.append(key.lower())
+            return keys
+
+        while select.select([self._stdin_fd], [], [], 0)[0]:
+            key_bytes = os.read(self._stdin_fd, 1)
+            if not key_bytes:
+                break
+            keys.append(key_bytes.decode("utf-8", errors="ignore").lower())
+        return keys
 
 
 class CsvRecordingSession:
@@ -190,6 +236,7 @@ def record_layer4():
     last_status = time.monotonic()
     previous_status_seen = 0
     session = CsvRecordingSession()
+    keyboard = ConsoleKeyReader()
 
     print(
         f"Logical Layer 4 is ready (hardware layer={layer_4})."
@@ -198,10 +245,11 @@ def record_layer4():
     print("Press R to start/stop recording; press Q to quit.")
 
     try:
+        keyboard.start()
         try:
             running = True
             while running:
-                for key in _read_pressed_keys():
+                for key in keyboard.read_pressed_keys():
                     if key == START_STOP_KEY:
                         if session.active:
                             session.stop()
@@ -263,6 +311,7 @@ def record_layer4():
             print("\nCtrl+C received; exiting safely...", flush=True)
 
     finally:
+        keyboard.close()
         session.stop()
         try:
             input_graph.stop()
