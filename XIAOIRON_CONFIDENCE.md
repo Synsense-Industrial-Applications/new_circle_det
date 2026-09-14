@@ -31,8 +31,7 @@ C_full = clip(ρ × min(1,K/8) × min(1,Q/3)
 
 ρ是圆周内点权重比例，K是有效角度扇区数，Q是覆盖象限数，MAD是原实现的径向误差统计量，A是原四方向弱一致性指标。
 8、3、2.5随检测器对应参数变化，上式列出默认值。
-即使该圆由upper分支接受，也用此full表达式作为新分数起点，而不是乘在带upper加成的分数上。
-此时 `full base` 是该表达式的数值，**不表示该圆通过了full分支全部门限**。
+`full base` 是检测器通过完整圆约束后得到的基础几何分数。
 
 ## 3. 遮挡奖励：缺失必须有上下文证据
 
@@ -108,7 +107,7 @@ xiaoiron_confidence = clip(
 detector.push(event)                      # 每个事件入队
 detection = detector.detect()             # 默认每6事件更新，其间返回上次结果
 if detection is not None:
-    old_score = detection.confidence      # 保留原full或upper模式的分数
+    old_score = detection.confidence      # 原完整圆几何分数
     new_score = detection.xiaoiron_confidence
     debug = detection.xiaoiron
     # debug.full_confidence / occlusion_factor / direction_factor
@@ -120,11 +119,11 @@ if detection is not None:
 
 纯评分函数 `calculate_xiaoiron_confidence` 不修改检测器状态，可以固定圆与事件窗口独立测试参数。
 播放器缓存保留16×4直方图和原始计数，不只是最终标量；Notebook最后一个cell可按事件序号查看。
-首次应用四方向扇区规则需要生成v5缓存。缓存生成后，播放器右侧调整公式参数不需要重跑几何检测。
+当前结构需要生成v6缓存。缓存生成后，播放器右侧调整公式参数不需要重跑几何检测。
 
 ## 7. 显示和验证
 
-紫色曲线和圆默认使用新分数；Score按钮切回原评分。full base与upper accepted保留作对照，upper仅在原upper分支有效时显示。
+紫色曲线和圆默认使用新分数；Score按钮切回原评分，并保留full base作对照。
 实时信息、各因子和16扇区方向柱形图置于事件图外。低于显示阈值时隐藏圆轮廓，但保留分数和扇区诊断；S可关闭候选辅助线。
 柱形图对应评分事件窗口，事件图对应时间拖尾，二者可能包含不同事件。这不是漏播。
 
@@ -136,7 +135,7 @@ v5奖励样例为第126,703个事件（full 0.454，新分数0.615），最大�
 下一步用人工标注的正常球、击打前后、遮挡、非球四类片段做对照；固定几何结果和阈值，比较旧分数与新分数的误报/漏报。
 再分别将occlusion_gain和direction_penalty_lambda设0做消融。没有标注前不把默认值称作最优参数。
 
-本次不修改候选排序、原full/upper接受门限及跟踪。原检测器完全拒绝的圆不会因为这项奖励自动复活。
+新评分不修改完整圆候选排序、接受门限及跟踪。原检测器完全拒绝的圆不会因为这项奖励自动复活。
 新评分每次更新开销为O(W+16×4)，W为窗口事件数；默认每6事件一次。调试缓存另占O(N×16×4)存储，N为总事件数。
 
 在本目录运行 `python -m unittest discover` 可执行单元测试；运行

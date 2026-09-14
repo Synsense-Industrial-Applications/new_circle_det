@@ -156,13 +156,13 @@ class AdaptiveCircleDetectorTests(unittest.TestCase):
         self.assertLess(math.hypot(result.cx - cx, result.cy - cy), 1.0)
         self.assertLess(abs(result.radius - radius), 0.8)
 
-    def test_recovers_upper_arc_when_lower_half_is_occluded(self) -> None:
+    def test_rejects_partial_top_arc_without_full_circle_support(self) -> None:
         rng = random.Random(109)
         detector = self.make_detector(hypotheses=1400)
         cx, cy, radius = 63.0, 67.0, 25.0
         for index in range(220):
-            # Only 130 degrees of the top of the ball remain visible. This is
-            # intentionally insufficient for the normal full-circle rules.
+            # Only 130 degrees of the top of the ball remain visible, which is
+            # intentionally insufficient for the full-circle rules.
             angle = rng.uniform(math.radians(-155.0), math.radians(-25.0))
             detector.push(
                 FlowEvent(
@@ -172,14 +172,9 @@ class AdaptiveCircleDetectorTests(unittest.TestCase):
                     float(index),
                 )
             )
-        result = detector.detect(force=True)
-        self.assertIsNotNone(result)
-        assert result is not None
-        self.assertEqual(result.support_mode, "upper")
-        self.assertLess(math.hypot(result.cx - cx, result.cy - cy), 1.0)
-        self.assertLess(abs(result.radius - radius), 0.8)
+        self.assertIsNone(detector.detect(force=True))
 
-    def test_does_not_treat_a_lower_arc_as_the_occluded_ball_case(self) -> None:
+    def test_rejects_partial_lower_arc_without_full_circle_support(self) -> None:
         rng = random.Random(109)
         detector = self.make_detector(hypotheses=1400)
         cx, cy, radius = 63.0, 67.0, 25.0
@@ -249,7 +244,6 @@ class AdaptiveCircleDetectorTests(unittest.TestCase):
             update_interval_events=1,
             min_radius_px=4.0,
             max_radius_px=80.0,
-            allow_upper_arc=False,
             seed=211,
         )
         tracked = AdaptiveCircleDetector(config)

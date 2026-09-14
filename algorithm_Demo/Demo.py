@@ -491,21 +491,59 @@ def configure_cnn_pipeline():
     )
 
     # ── Layer 4 (输出重排) ──
-    weights = np.zeros((8, 8, 1, 1), dtype=np.int8)
-    weights[0, 0, 0, 0] = 1
-    weights[3, 1, 0, 0] = 1
-    weights[4, 2, 0, 0] = 1
-    weights[7, 3, 0, 0] = 1
-    weights[1, 4, 0, 0] = 1
-    weights[2, 5, 0, 0] = 1
-    weights[5, 6, 0, 0] = 1
-    weights[6, 7, 0, 0] = 1
+    # weights = np.zeros((8, 8, 1, 1), dtype=np.int8)
+    # weights[0, 0, 0, 0] = 1
+    # weights[3, 1, 0, 0] = 1
+    # weights[4, 2, 0, 0] = 1
+    # weights[7, 3, 0, 0] = 1
+    # weights[1, 4, 0, 0] = 1
+    # weights[2, 5, 0, 0] = 1
+    # weights[5, 6, 0, 0] = 1
+    # weights[6, 7, 0, 0] = 1
+    # create_layer(
+    #     layer_name="layer_4", layer=layer_4,
+    #     padding=0, stride=1, kernel_size=1,
+    #     input_shape_feature=8, input_shape_size_x=64, input_shape_size_y=64,
+    #     output_shape_feature=8, output_shape_size_x=64, output_shape_size_y=64,
+    #     threshold_high=1, threshold_low=-1,
+    #     weights=weights,
+    #     monitor_enable=True,
+    # )
+    weights = np.zeros((8, 8, 5, 5), dtype=np.int8)
+    kernel_anti = np.array([
+        [1, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0],
+        [0, 0, 2, 0, 0],
+        [0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 1],
+    ], dtype=np.int8)
+
+    kernel_main = np.array([
+        [0, 0, 0, 0, 1],
+        [0, 0, 0, 1, 0],
+        [0, 0, 2, 0, 0],
+        [0, 1, 0, 0, 0],
+        [1, 0, 0, 0, 0],
+    ], dtype=np.int8)
+
+    # 右下、左上：空间方向都是 \
+    weights[0, 0] = kernel_main
+    weights[3, 1] = kernel_main
+    weights[4, 2] = kernel_main
+    weights[7, 3] = kernel_main
+
+    # 左下、右上：空间方向都是 /
+    weights[1, 4] = kernel_anti
+    weights[2, 5] = kernel_anti
+    weights[5, 6] = kernel_anti
+    weights[6, 7] = kernel_anti
+
     create_layer(
         layer_name="layer_4", layer=layer_4,
-        padding=0, stride=1, kernel_size=1,
+        padding=2, stride=1, kernel_size=5,
         input_shape_feature=8, input_shape_size_x=64, input_shape_size_y=64,
         output_shape_feature=8, output_shape_size_x=64, output_shape_size_y=64,
-        threshold_high=1, threshold_low=-1,
+        threshold_high=4, threshold_low=-1,
         weights=weights,
         monitor_enable=True,
     )
@@ -563,8 +601,7 @@ def format_output_line(update):
         f"cx={detection.cx:.3f} cy={detection.cy:.3f} "
         f"radius={detection.radius:.3f} "
         f"{CIRCLE_FILTER_CONFIG.confidence_attribute}="
-        f"{_confidence_value(detection):.4f} "
-        f"mode={detection.support_mode}"
+        f"{_confidence_value(detection):.4f}"
     )
 
 
@@ -713,12 +750,10 @@ class TerminalReporter:
                 f"geom={detection.confidence:.4f}"
             )
             quality_line = (
-                f"QUALITY mode={detection.support_mode} "
-                f"inliers={detection.inlier_count}/{detection.event_count} "
+                f"QUALITY inliers={detection.inlier_count}/{detection.event_count} "
                 f"ratio={detection.radial_inlier_ratio:.3f} "
                 f"MAD={detection.radial_mad:.3f}px "
                 f"sectors={detection.angular_sectors} "
-                f"upper_sectors={detection.upper_angular_sectors} "
                 f"quadrants={detection.quadrants} "
                 f"direction={detection.direction_agreement:.3f} "
                 f"hypotheses={detection.hypotheses_tested} "

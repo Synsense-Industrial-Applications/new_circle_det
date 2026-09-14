@@ -1,0 +1,1616 @@
+<!doctype html>
+<html lang="en" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Runtime Log Overview</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Runtime Log Overview" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot; data-visualize-standalone&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Runtime Log Overview&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 14px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --icon-size: 16px;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --corner-shape: round;
+  --radius: var(--border-radius-lg, 10px);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: var(--visualize-paint-gutter, 0px);
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans) !important;
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: var(--corner-shape);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card, .progress) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+hr {
+  width: 100%;
+  height: 1px;
+  margin-block: 6px;
+  border: 0;
+  background: var(--border);
+}
+
+.nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress {
+  display: flex;
+  height: 8px;
+  margin-block: calc((var(--line-height-normal, 1.5em) - 8px) / 2);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+}
+
+.progress-bar:only-child {
+  border-radius: var(--radius-full);
+}
+
+.progress-bar {
+  height: 100%;
+  flex-shrink: 0;
+  border: 0;
+  background: var(--viz-series-1);
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.nav-link,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn,
+.nav-link {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover,
+.nav-link:not(:disabled):not([aria-disabled=&quot;true&quot;]):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.nav-pills .nav-link {
+  min-width: 0;
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.nav-justified .nav-link {
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.nav-pills .nav-link.active {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.btn:disabled,
+.nav-link:disabled,
+.nav-link[aria-disabled=&quot;true&quot;] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: var(--corner-shape);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+  [aria-pressed=&quot;true&quot;],
+  [aria-selected=&quot;true&quot;],
+  .is-selected
+) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .nav-link,
+  .form-control,
+  .form-select {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Keep small-screen WebKit from zooming when a text field receives focus. */
+  .form-control,
+  .form-select {
+    font-size: max(16px, var(--font-size-normal));
+  }
+
+  .form-control[type=&quot;file&quot;]::file-selector-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .form-control-color[type=&quot;color&quot;] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .form-control:is(
+    [type=&quot;date&quot;],
+    [type=&quot;datetime-local&quot;],
+    [type=&quot;month&quot;],
+    [type=&quot;time&quot;],
+    [type=&quot;week&quot;]
+  ) {
+    min-width: 0;
+    max-width: 100%;
+    padding-block: 8px;
+  }
+
+  .form-check {
+    min-height: 44px;
+    padding-inline: 15px;
+  }
+
+  .form-check-input {
+    position: relative;
+  }
+
+  .form-check-input::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    content: &quot;&quot;;
+    transform: translate(-50%, -50%);
+  }
+
+  .form-check-label {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .form-range {
+    height: 44px;
+    touch-action: pan-y;
+  }
+
+  .form-range::-webkit-slider-runnable-track {
+    height: 44px;
+  }
+
+  .form-range::-moz-range-track {
+    height: 44px;
+  }
+
+  .form-range::-webkit-slider-thumb {
+    margin-top: 12px;
+  }
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: var(--icon-size) !important;
+  height: var(--icon-size) !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+&lt;section id=&quot;runtime-log-overview&quot;&gt;
+  &lt;h1&gt;台球事件圆检测：实机日志总览&lt;/h1&gt;
+  &lt;p class=&quot;text-muted text-small&quot;&gt;会话 &lt;span class=&quot;tabular-nums&quot;&gt;20260911_131309_741477&lt;/span&gt;，96.7 秒内记录 125,329 个事件、20,889 次检测更新与 33 次最终输出。&lt;/p&gt;
+  &lt;div class=&quot;runtime-grid&quot;&gt;
+    &lt;figure&gt;&lt;h2&gt;事件输入率与处理能力&lt;/h2&gt;&lt;div id=&quot;runtime-rate-chart&quot; class=&quot;runtime-chart&quot;&gt;&lt;/div&gt;&lt;/figure&gt;
+    &lt;figure&gt;&lt;h2&gt;估算处理积压&lt;/h2&gt;&lt;div id=&quot;runtime-lag-chart&quot; class=&quot;runtime-chart&quot;&gt;&lt;/div&gt;&lt;/figure&gt;
+    &lt;figure&gt;&lt;h2&gt;主循环时间分解&lt;/h2&gt;&lt;div id=&quot;runtime-time-chart&quot; class=&quot;runtime-chart&quot;&gt;&lt;/div&gt;&lt;/figure&gt;
+    &lt;figure&gt;&lt;h2&gt;单次检测耗时&lt;/h2&gt;&lt;div id=&quot;runtime-latency-chart&quot; class=&quot;runtime-chart&quot;&gt;&lt;/div&gt;&lt;/figure&gt;
+    &lt;figure&gt;&lt;h2&gt;候选筛选漏斗&lt;/h2&gt;&lt;div id=&quot;runtime-funnel-chart&quot; class=&quot;runtime-chart&quot;&gt;&lt;/div&gt;&lt;/figure&gt;
+    &lt;figure&gt;&lt;h2&gt;xiaoiron_confidence 分布&lt;/h2&gt;&lt;div class=&quot;runtime-legend&quot; aria-label=&quot;置信度分布图例&quot;&gt;
+      &lt;button type=&quot;button&quot; aria-pressed=&quot;true&quot; data-series=&quot;full&quot;&gt;&lt;span class=&quot;runtime-swatch runtime-swatch-1&quot;&gt;&lt;/span&gt;full&lt;/button&gt;
+      &lt;button type=&quot;button&quot; aria-pressed=&quot;true&quot; data-series=&quot;upper&quot;&gt;&lt;span class=&quot;runtime-swatch runtime-swatch-2&quot;&gt;&lt;/span&gt;upper&lt;/button&gt;
+    &lt;/div&gt;&lt;div id=&quot;runtime-confidence-chart&quot; class=&quot;runtime-chart&quot;&gt;&lt;/div&gt;&lt;/figure&gt;
+    &lt;figure&gt;&lt;h2&gt;方向证据瓶颈&lt;/h2&gt;&lt;div id=&quot;runtime-sector-chart&quot; class=&quot;runtime-chart&quot;&gt;&lt;/div&gt;&lt;/figure&gt;
+    &lt;figure&gt;&lt;h2&gt;阈值敏感性（几何已通过）&lt;/h2&gt;&lt;div id=&quot;runtime-threshold-chart&quot; class=&quot;runtime-chart&quot;&gt;&lt;/div&gt;&lt;/figure&gt;
+    &lt;figure class=&quot;runtime-wide&quot;&gt;&lt;h2&gt;最终输出圆在 128×128 画布中的位置&lt;/h2&gt;&lt;div id=&quot;runtime-center-chart&quot; class=&quot;runtime-chart runtime-chart-tall&quot;&gt;&lt;/div&gt;&lt;/figure&gt;
+  &lt;/div&gt;
+  &lt;div id=&quot;runtime-log-overview-tooltip&quot; class=&quot;runtime-tooltip&quot; role=&quot;tooltip&quot; hidden&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;style&gt;
+#runtime-log-overview { position: relative; width: 100%; color: var(--foreground); }
+#runtime-log-overview .runtime-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 28px; align-items: start; }
+#runtime-log-overview figure { margin: 0; min-width: 0; }
+#runtime-log-overview figure.runtime-wide { grid-column: 1 / -1; }
+#runtime-log-overview h1 { margin-bottom: 4px; }
+#runtime-log-overview h2 { margin-bottom: 6px; }
+#runtime-log-overview .runtime-chart { width: 100%; min-height: 260px; }
+#runtime-log-overview .runtime-chart-tall { min-height: 390px; }
+#runtime-log-overview svg { display: block; width: 100%; overflow: visible; }
+#runtime-log-overview .runtime-axis path,
+#runtime-log-overview .runtime-axis line { stroke: var(--border); }
+#runtime-log-overview .runtime-axis text,
+#runtime-log-overview svg text { fill: var(--foreground); font-size: 12px; font-weight: 400; }
+#runtime-log-overview .runtime-gridline line { stroke: var(--border); opacity: 0.55; }
+#runtime-log-overview .runtime-gridline path { display: none; }
+#runtime-log-overview .runtime-frame { fill: none; stroke: var(--border); stroke-width: 1; }
+#runtime-log-overview .runtime-axis-title { fill: var(--foreground); font-size: 12px; }
+#runtime-log-overview .runtime-legend { display: flex; flex-wrap: wrap; gap: 12px; min-height: 28px; align-items: center; }
+#runtime-log-overview .runtime-legend button { appearance: none; border: 0; background: transparent; color: var(--foreground); padding: 2px 0; font: inherit; cursor: pointer; }
+#runtime-log-overview .runtime-legend button[aria-pressed=&quot;false&quot;] { opacity: 0.45; text-decoration: line-through; }
+#runtime-log-overview .runtime-swatch { display: inline-block; width: 18px; height: 3px; margin-right: 6px; vertical-align: middle; }
+#runtime-log-overview .runtime-swatch-1 { background: var(--viz-series-1); }
+#runtime-log-overview .runtime-swatch-2 { background: var(--viz-series-2); }
+#runtime-log-overview .runtime-tooltip { position: absolute; z-index: 4; pointer-events: none; max-width: 260px; padding: 8px 10px; color: var(--popover-foreground); background: var(--popover); border: 1px solid var(--border); }
+@media (max-width: 720px) {
+  #runtime-log-overview .runtime-grid { grid-template-columns: 1fr; }
+  #runtime-log-overview figure.runtime-wide { grid-column: auto; }
+}
+&lt;/style&gt;
+&lt;script src=&quot;https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const root = document.getElementById(&#x27;runtime-log-overview&#x27;);
+  const data = {&quot;session&quot;:&quot;20260911_131309_741477&quot;,&quot;summary&quot;:{&quot;elapsed&quot;:96.737,&quot;events&quot;:125329,&quot;updates&quot;:20889,&quot;candidates&quot;:6443,&quot;accepted&quot;:33,&quot;processingCapacity&quot;:2322.78,&quot;inputP95&quot;:3149.64,&quot;maxLag&quot;:20.536,&quot;maxLagElapsed&quot;:68.449},&quot;rates&quot;:[{&quot;elapsed_s&quot;:11.364,&quot;layer4_events_per_s&quot;:38.855},{&quot;elapsed_s&quot;:12.368,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:13.368,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:14.37,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:15.372,&quot;layer4_events_per_s&quot;:0.998},{&quot;elapsed_s&quot;:16.382,&quot;layer4_events_per_s&quot;:2.97},{&quot;elapsed_s&quot;:17.627,&quot;layer4_events_per_s&quot;:1241.097},{&quot;elapsed_s&quot;:18.801,&quot;layer4_events_per_s&quot;:1743.574},{&quot;elapsed_s&quot;:19.886,&quot;layer4_events_per_s&quot;:1888.482},{&quot;elapsed_s&quot;:21.154,&quot;layer4_events_per_s&quot;:2019.347},{&quot;elapsed_s&quot;:22.451,&quot;layer4_events_per_s&quot;:1972.889},{&quot;elapsed_s&quot;:23.641,&quot;layer4_events_per_s&quot;:1721.556},{&quot;elapsed_s&quot;:24.844,&quot;layer4_events_per_s&quot;:2554.001},{&quot;elapsed_s&quot;:26.053,&quot;layer4_events_per_s&quot;:2116.343},{&quot;elapsed_s&quot;:27.176,&quot;layer4_events_per_s&quot;:1824.282},{&quot;elapsed_s&quot;:28.237,&quot;layer4_events_per_s&quot;:2894.828},{&quot;elapsed_s&quot;:29.286,&quot;layer4_events_per_s&quot;:1952.908},{&quot;elapsed_s&quot;:30.433,&quot;layer4_events_per_s&quot;:1784.423},{&quot;elapsed_s&quot;:31.561,&quot;layer4_events_per_s&quot;:1816.777},{&quot;elapsed_s&quot;:32.732,&quot;layer4_events_per_s&quot;:2623.903},{&quot;elapsed_s&quot;:33.925,&quot;layer4_events_per_s&quot;:2574.174},{&quot;elapsed_s&quot;:34.997,&quot;layer4_events_per_s&quot;:2388.849},{&quot;elapsed_s&quot;:36.145,&quot;layer4_events_per_s&quot;:2675.746},{&quot;elapsed_s&quot;:37.145,&quot;layer4_events_per_s&quot;:3070.972},{&quot;elapsed_s&quot;:38.232,&quot;layer4_events_per_s&quot;:3297.587},{&quot;elapsed_s&quot;:39.383,&quot;layer4_events_per_s&quot;:3112.654},{&quot;elapsed_s&quot;:40.506,&quot;layer4_events_per_s&quot;:2279.678},{&quot;elapsed_s&quot;:41.576,&quot;layer4_events_per_s&quot;:1913.898},{&quot;elapsed_s&quot;:42.676,&quot;layer4_events_per_s&quot;:2328.11},{&quot;elapsed_s&quot;:43.716,&quot;layer4_events_per_s&quot;:2953.129},{&quot;elapsed_s&quot;:44.845,&quot;layer4_events_per_s&quot;:2268.218},{&quot;elapsed_s&quot;:46.047,&quot;layer4_events_per_s&quot;:2129.898},{&quot;elapsed_s&quot;:47.285,&quot;layer4_events_per_s&quot;:2066.799},{&quot;elapsed_s&quot;:48.34,&quot;layer4_events_per_s&quot;:1941.744},{&quot;elapsed_s&quot;:49.463,&quot;layer4_events_per_s&quot;:1367.434},{&quot;elapsed_s&quot;:50.522,&quot;layer4_events_per_s&quot;:2418.317},{&quot;elapsed_s&quot;:51.587,&quot;layer4_events_per_s&quot;:1923.574},{&quot;elapsed_s&quot;:52.933,&quot;layer4_events_per_s&quot;:1521.49},{&quot;elapsed_s&quot;:54.015,&quot;layer4_events_per_s&quot;:1419.6},{&quot;elapsed_s&quot;:55.105,&quot;layer4_events_per_s&quot;:1877.509},{&quot;elapsed_s&quot;:56.234,&quot;layer4_events_per_s&quot;:2268.333},{&quot;elapsed_s&quot;:57.271,&quot;layer4_events_per_s&quot;:2468.479},{&quot;elapsed_s&quot;:58.347,&quot;layer4_events_per_s&quot;:2379.99},{&quot;elapsed_s&quot;:59.555,&quot;layer4_events_per_s&quot;:1694.323},{&quot;elapsed_s&quot;:60.659,&quot;layer4_events_per_s&quot;:1856.08},{&quot;elapsed_s&quot;:61.862,&quot;layer4_events_per_s&quot;:2127.625},{&quot;elapsed_s&quot;:62.915,&quot;layer4_events_per_s&quot;:2430.339},{&quot;elapsed_s&quot;:64.068,&quot;layer4_events_per_s&quot;:2220.69},{&quot;elapsed_s&quot;:65.286,&quot;layer4_events_per_s&quot;:2522.57},{&quot;elapsed_s&quot;:66.382,&quot;layer4_events_per_s&quot;:1868.514},{&quot;elapsed_s&quot;:67.572,&quot;layer4_events_per_s&quot;:1721.469},{&quot;elapsed_s&quot;:68.761,&quot;layer4_events_per_s&quot;:1722.502},{&quot;elapsed_s&quot;:69.828,&quot;layer4_events_per_s&quot;:2399.345},{&quot;elapsed_s&quot;:71.017,&quot;layer4_events_per_s&quot;:2152.277},{&quot;elapsed_s&quot;:72.085,&quot;layer4_events_per_s&quot;:3355.971},{&quot;elapsed_s&quot;:73.171,&quot;layer4_events_per_s&quot;:3301.068},{&quot;elapsed_s&quot;:74.174,&quot;layer4_events_per_s&quot;:764.311},{&quot;elapsed_s&quot;:75.182,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:76.192,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:77.193,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:78.193,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:79.2,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:80.208,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:81.211,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:82.221,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:83.223,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:84.224,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:85.234,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:86.243,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:87.252,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:88.262,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:89.271,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:90.281,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:91.29,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:92.293,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:93.294,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:94.303,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:95.313,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:96.314,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:97.315,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:98.325,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:99.334,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:100.344,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:101.344,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:102.345,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:103.346,&quot;layer4_events_per_s&quot;:0.0},{&quot;elapsed_s&quot;:104.361,&quot;layer4_events_per_s&quot;:3.942},{&quot;elapsed_s&quot;:105.37,&quot;layer4_events_per_s&quot;:88.198},{&quot;elapsed_s&quot;:106.378,&quot;layer4_events_per_s&quot;:0.992}],&quot;lag&quot;:[{&quot;elapsed_s&quot;:10.5066,&quot;estimated_lag_s&quot;:0.0002,&quot;batch_number&quot;:14},{&quot;elapsed_s&quot;:10.517,&quot;estimated_lag_s&quot;:0.0029,&quot;batch_number&quot;:15},{&quot;elapsed_s&quot;:10.5274,&quot;estimated_lag_s&quot;:-0.014,&quot;batch_number&quot;:16},{&quot;elapsed_s&quot;:10.5379,&quot;estimated_lag_s&quot;:-0.0119,&quot;batch_number&quot;:17},{&quot;elapsed_s&quot;:10.5585,&quot;estimated_lag_s&quot;:-0.0073,&quot;batch_number&quot;:19},{&quot;elapsed_s&quot;:10.5688,&quot;estimated_lag_s&quot;:-0.0105,&quot;batch_number&quot;:20},{&quot;elapsed_s&quot;:10.6406,&quot;estimated_lag_s&quot;:-0.0021,&quot;batch_number&quot;:27},{&quot;elapsed_s&quot;:10.8873,&quot;estimated_lag_s&quot;:-0.0013,&quot;batch_number&quot;:51},{&quot;elapsed_s&quot;:10.9079,&quot;estimated_lag_s&quot;:-0.0055,&quot;batch_number&quot;:53},{&quot;elapsed_s&quot;:11.0107,&quot;estimated_lag_s&quot;:-0.0143,&quot;batch_number&quot;:63},{&quot;elapsed_s&quot;:11.0935,&quot;estimated_lag_s&quot;:-0.0115,&quot;batch_number&quot;:71},{&quot;elapsed_s&quot;:11.135,&quot;estimated_lag_s&quot;:-0.0033,&quot;batch_number&quot;:75},{&quot;elapsed_s&quot;:15.0961,&quot;estimated_lag_s&quot;:-0.0072,&quot;batch_number&quot;:462},{&quot;elapsed_s&quot;:15.4437,&quot;estimated_lag_s&quot;:-0.0049,&quot;batch_number&quot;:496},{&quot;elapsed_s&quot;:15.5358,&quot;estimated_lag_s&quot;:-0.0048,&quot;batch_number&quot;:505},{&quot;elapsed_s&quot;:16.382,&quot;estimated_lag_s&quot;:-0.006,&quot;batch_number&quot;:588},{&quot;elapsed_s&quot;:16.4433,&quot;estimated_lag_s&quot;:-0.0078,&quot;batch_number&quot;:594},{&quot;elapsed_s&quot;:16.4638,&quot;estimated_lag_s&quot;:-0.0082,&quot;batch_number&quot;:596},{&quot;elapsed_s&quot;:16.4741,&quot;estimated_lag_s&quot;:-0.0081,&quot;batch_number&quot;:597},{&quot;elapsed_s&quot;:16.4846,&quot;estimated_lag_s&quot;:-0.0082,&quot;batch_number&quot;:598},{&quot;elapsed_s&quot;:16.4953,&quot;estimated_lag_s&quot;:-0.0076,&quot;batch_number&quot;:599},{&quot;elapsed_s&quot;:16.5534,&quot;estimated_lag_s&quot;:0.0405,&quot;batch_number&quot;:600},{&quot;elapsed_s&quot;:16.6048,&quot;estimated_lag_s&quot;:0.0554,&quot;batch_number&quot;:601},{&quot;elapsed_s&quot;:16.6638,&quot;estimated_lag_s&quot;:0.0001,&quot;batch_number&quot;:606},{&quot;elapsed_s&quot;:16.6883,&quot;estimated_lag_s&quot;:0.0055,&quot;batch_number&quot;:607},{&quot;elapsed_s&quot;:16.7054,&quot;estimated_lag_s&quot;:0.0009,&quot;batch_number&quot;:608},{&quot;elapsed_s&quot;:16.7157,&quot;estimated_lag_s&quot;:0.0105,&quot;batch_number&quot;:609},{&quot;elapsed_s&quot;:16.726,&quot;estimated_lag_s&quot;:-0.0066,&quot;batch_number&quot;:610},{&quot;elapsed_s&quot;:16.8159,&quot;estimated_lag_s&quot;:0.0052,&quot;batch_number&quot;:618},{&quot;elapsed_s&quot;:16.8413,&quot;estimated_lag_s&quot;:0.0113,&quot;batch_number&quot;:619},{&quot;elapsed_s&quot;:16.8804,&quot;estimated_lag_s&quot;:0.0196,&quot;batch_number&quot;:620},{&quot;elapsed_s&quot;:16.9278,&quot;estimated_lag_s&quot;:0.0343,&quot;batch_number&quot;:621},{&quot;elapsed_s&quot;:17.0746,&quot;estimated_lag_s&quot;:0.1278,&quot;batch_number&quot;:622},{&quot;elapsed_s&quot;:17.3148,&quot;estimated_lag_s&quot;:0.3208,&quot;batch_number&quot;:623},{&quot;elapsed_s&quot;:17.627,&quot;estimated_lag_s&quot;:0.6111,&quot;batch_number&quot;:624},{&quot;elapsed_s&quot;:17.8982,&quot;estimated_lag_s&quot;:0.8574,&quot;batch_number&quot;:625},{&quot;elapsed_s&quot;:18.1896,&quot;estimated_lag_s&quot;:1.1191,&quot;batch_number&quot;:626},{&quot;elapsed_s&quot;:18.5056,&quot;estimated_lag_s&quot;:1.394,&quot;batch_number&quot;:627},{&quot;elapsed_s&quot;:18.8016,&quot;estimated_lag_s&quot;:1.6448,&quot;batch_number&quot;:628},{&quot;elapsed_s&quot;:19.0306,&quot;estimated_lag_s&quot;:1.8333,&quot;batch_number&quot;:629},{&quot;elapsed_s&quot;:19.2855,&quot;estimated_lag_s&quot;:2.0519,&quot;batch_number&quot;:630},{&quot;elapsed_s&quot;:19.6239,&quot;estimated_lag_s&quot;:2.3322,&quot;batch_number&quot;:631},{&quot;elapsed_s&quot;:19.886,&quot;estimated_lag_s&quot;:2.4807,&quot;batch_number&quot;:632},{&quot;elapsed_s&quot;:20.0906,&quot;estimated_lag_s&quot;:2.6397,&quot;batch_number&quot;:633},{&quot;elapsed_s&quot;:20.319,&quot;estimated_lag_s&quot;:2.8207,&quot;batch_number&quot;:634},{&quot;elapsed_s&quot;:20.6095,&quot;estimated_lag_s&quot;:3.0724,&quot;batch_number&quot;:635},{&quot;elapsed_s&quot;:20.8728,&quot;estimated_lag_s&quot;:3.3,&quot;batch_number&quot;:636},{&quot;elapsed_s&quot;:21.1537,&quot;estimated_lag_s&quot;:3.5444,&quot;batch_number&quot;:637},{&quot;elapsed_s&quot;:21.4148,&quot;estimated_lag_s&quot;:3.7581,&quot;batch_number&quot;:638},{&quot;elapsed_s&quot;:21.6581,&quot;estimated_lag_s&quot;:3.8713,&quot;batch_number&quot;:639},{&quot;elapsed_s&quot;:21.8465,&quot;estimated_lag_s&quot;:3.9867,&quot;batch_number&quot;:640},{&quot;elapsed_s&quot;:22.1339,&quot;estimated_lag_s&quot;:4.2517,&quot;batch_number&quot;:641},{&quot;elapsed_s&quot;:22.4513,&quot;estimated_lag_s&quot;:4.5456,&quot;batch_number&quot;:642},{&quot;elapsed_s&quot;:22.7287,&quot;estimated_lag_s&quot;:4.797,&quot;batch_number&quot;:643},{&quot;elapsed_s&quot;:23.0514,&quot;estimated_lag_s&quot;:5.1,&quot;batch_number&quot;:644},{&quot;elapsed_s&quot;:23.3649,&quot;estimated_lag_s&quot;:5.3846,&quot;batch_number&quot;:645},{&quot;elapsed_s&quot;:23.6409,&quot;estimated_lag_s&quot;:5.5813,&quot;batch_number&quot;:646},{&quot;elapsed_s&quot;:23.8377,&quot;estimated_lag_s&quot;:5.673,&quot;batch_number&quot;:647},{&quot;elapsed_s&quot;:24.036,&quot;estimated_lag_s&quot;:5.815,&quot;batch_number&quot;:648},{&quot;elapsed_s&quot;:24.2211,&quot;estimated_lag_s&quot;:5.9419,&quot;batch_number&quot;:649},{&quot;elapsed_s&quot;:24.4348,&quot;estimated_lag_s&quot;:6.0763,&quot;batch_number&quot;:650},{&quot;elapsed_s&quot;:24.6399,&quot;estimated_lag_s&quot;:6.1954,&quot;batch_number&quot;:651},{&quot;elapsed_s&quot;:24.8437,&quot;estimated_lag_s&quot;:6.307,&quot;batch_number&quot;:652},{&quot;elapsed_s&quot;:25.1131,&quot;estimated_lag_s&quot;:6.5049,&quot;batch_number&quot;:653},{&quot;elapsed_s&quot;:25.4087,&quot;estimated_lag_s&quot;:6.7346,&quot;batch_number&quot;:654},{&quot;elapsed_s&quot;:25.6244,&quot;estimated_lag_s&quot;:6.8748,&quot;batch_number&quot;:655},{&quot;elapsed_s&quot;:25.8277,&quot;estimated_lag_s&quot;:7.0401,&quot;batch_number&quot;:656},{&quot;elapsed_s&quot;:26.0534,&quot;estimated_lag_s&quot;:7.1934,&quot;batch_number&quot;:657},{&quot;elapsed_s&quot;:26.3429,&quot;estimated_lag_s&quot;:7.4078,&quot;batch_number&quot;:658},{&quot;elapsed_s&quot;:26.7003,&quot;estimated_lag_s&quot;:7.7141,&quot;batch_number&quot;:659},{&quot;elapsed_s&quot;:26.9752,&quot;estimated_lag_s&quot;:7.9056,&quot;batch_number&quot;:660},{&quot;elapsed_s&quot;:27.176,&quot;estimated_lag_s&quot;:8.0773,&quot;batch_number&quot;:661},{&quot;elapsed_s&quot;:27.3728,&quot;estimated_lag_s&quot;:8.2389,&quot;batch_number&quot;:662},{&quot;elapsed_s&quot;:27.5513,&quot;estimated_lag_s&quot;:8.331,&quot;batch_number&quot;:663},{&quot;elapsed_s&quot;:27.7102,&quot;estimated_lag_s&quot;:8.4271,&quot;batch_number&quot;:664},{&quot;elapsed_s&quot;:27.8499,&quot;estimated_lag_s&quot;:8.5007,&quot;batch_number&quot;:665},{&quot;elapsed_s&quot;:28.0458,&quot;estimated_lag_s&quot;:8.4807,&quot;batch_number&quot;:666},{&quot;elapsed_s&quot;:28.2372,&quot;estimated_lag_s&quot;:8.5187,&quot;batch_number&quot;:667},{&quot;elapsed_s&quot;:28.5094,&quot;estimated_lag_s&quot;:8.6047,&quot;batch_number&quot;:668},{&quot;elapsed_s&quot;:28.7828,&quot;estimated_lag_s&quot;:8.6137,&quot;batch_number&quot;:669},{&quot;elapsed_s&quot;:29.0226,&quot;estimated_lag_s&quot;:8.6397,&quot;batch_number&quot;:670},{&quot;elapsed_s&quot;:29.286,&quot;estimated_lag_s&quot;:8.7187,&quot;batch_number&quot;:671},{&quot;elapsed_s&quot;:29.5495,&quot;estimated_lag_s&quot;:8.8915,&quot;batch_number&quot;:672},{&quot;elapsed_s&quot;:29.8099,&quot;estimated_lag_s&quot;:9.1149,&quot;batch_number&quot;:673},{&quot;elapsed_s&quot;:30.066,&quot;estimated_lag_s&quot;:9.3489,&quot;batch_number&quot;:674},{&quot;elapsed_s&quot;:30.4337,&quot;estimated_lag_s&quot;:9.7002,&quot;batch_number&quot;:675},{&quot;elapsed_s&quot;:30.7754,&quot;estimated_lag_s&quot;:10.0255,&quot;batch_number&quot;:676},{&quot;elapsed_s&quot;:31.0936,&quot;estimated_lag_s&quot;:10.3273,&quot;batch_number&quot;:677},{&quot;elapsed_s&quot;:31.3302,&quot;estimated_lag_s&quot;:10.5475,&quot;batch_number&quot;:678},{&quot;elapsed_s&quot;:31.5609,&quot;estimated_lag_s&quot;:10.7422,&quot;batch_number&quot;:679},{&quot;elapsed_s&quot;:31.7546,&quot;estimated_lag_s&quot;:10.8384,&quot;batch_number&quot;:680},{&quot;elapsed_s&quot;:32.0024,&quot;estimated_lag_s&quot;:10.7983,&quot;batch_number&quot;:681},{&quot;elapsed_s&quot;:32.1381,&quot;estimated_lag_s&quot;:10.8085,&quot;batch_number&quot;:682},{&quot;elapsed_s&quot;:32.2507,&quot;estimated_lag_s&quot;:7.5849,&quot;batch_number&quot;:683},{&quot;elapsed_s&quot;:32.5242,&quot;estimated_lag_s&quot;:6.1199,&quot;batch_number&quot;:684},{&quot;elapsed_s&quot;:32.7317,&quot;estimated_lag_s&quot;:6.284,&quot;batch_number&quot;:685},{&quot;elapsed_s&quot;:32.9281,&quot;estimated_lag_s&quot;:6.4449,&quot;batch_number&quot;:686},{&quot;elapsed_s&quot;:33.0984,&quot;estimated_lag_s&quot;:6.5801,&quot;batch_number&quot;:687},{&quot;elapsed_s&quot;:33.2804,&quot;estimated_lag_s&quot;:6.7119,&quot;batch_number&quot;:688},{&quot;elapsed_s&quot;:33.439,&quot;estimated_lag_s&quot;:6.6777,&quot;batch_number&quot;:689},{&quot;elapsed_s&quot;:33.6779,&quot;estimated_lag_s&quot;:6.7314,&quot;batch_number&quot;:690},{&quot;elapsed_s&quot;:33.9251,&quot;estimated_lag_s&quot;:6.8335,&quot;batch_number&quot;:691},{&quot;elapsed_s&quot;:34.1573,&quot;estimated_lag_s&quot;:6.8062,&quot;batch_number&quot;:692},{&quot;elapsed_s&quot;:34.3584,&quot;estimated_lag_s&quot;:6.4718,&quot;batch_number&quot;:693},{&quot;elapsed_s&quot;:34.6167,&quot;estimated_lag_s&quot;:4.3696,&quot;batch_number&quot;:694},{&quot;elapsed_s&quot;:34.8295,&quot;estimated_lag_s&quot;:4.4584,&quot;batch_number&quot;:695},{&quot;elapsed_s&quot;:34.9967,&quot;estimated_lag_s&quot;:4.4898,&quot;batch_number&quot;:696},{&quot;elapsed_s&quot;:35.1594,&quot;estimated_lag_s&quot;:4.6098,&quot;batch_number&quot;:697},{&quot;elapsed_s&quot;:35.3538,&quot;estimated_lag_s&quot;:4.7745,&quot;batch_number&quot;:698},{&quot;elapsed_s&quot;:35.5967,&quot;estimated_lag_s&quot;:4.9922,&quot;batch_number&quot;:699},{&quot;elapsed_s&quot;:35.7633,&quot;estimated_lag_s&quot;:5.138,&quot;batch_number&quot;:700},{&quot;elapsed_s&quot;:35.9565,&quot;estimated_lag_s&quot;:5.3149,&quot;batch_number&quot;:701},{&quot;elapsed_s&quot;:36.1448,&quot;estimated_lag_s&quot;:5.4867,&quot;batch_number&quot;:702},{&quot;elapsed_s&quot;:36.2875,&quot;estimated_lag_s&quot;:5.613,&quot;batch_number&quot;:703},{&quot;elapsed_s&quot;:36.4423,&quot;estimated_lag_s&quot;:5.7515,&quot;batch_number&quot;:704},{&quot;elapsed_s&quot;:36.6098,&quot;estimated_lag_s&quot;:5.9026,&quot;batch_number&quot;:705},{&quot;elapsed_s&quot;:36.7788,&quot;estimated_lag_s&quot;:6.0552,&quot;batch_number&quot;:706},{&quot;elapsed_s&quot;:36.9785,&quot;estimated_lag_s&quot;:6.1969,&quot;batch_number&quot;:707},{&quot;elapsed_s&quot;:37.1451,&quot;estimated_lag_s&quot;:6.307,&quot;batch_number&quot;:708},{&quot;elapsed_s&quot;:37.3049,&quot;estimated_lag_s&quot;:6.2382,&quot;batch_number&quot;:709},{&quot;elapsed_s&quot;:37.4847,&quot;estimated_lag_s&quot;:6.3508,&quot;batch_number&quot;:710},{&quot;elapsed_s&quot;:37.6498,&quot;estimated_lag_s&quot;:6.4662,&quot;batch_number&quot;:711},{&quot;elapsed_s&quot;:37.7962,&quot;estimated_lag_s&quot;:6.2295,&quot;batch_number&quot;:712},{&quot;elapsed_s&quot;:37.9399,&quot;estimated_lag_s&quot;:6.2248,&quot;batch_number&quot;:713},{&quot;elapsed_s&quot;:38.0638,&quot;estimated_lag_s&quot;:6.0097,&quot;batch_number&quot;:714},{&quot;elapsed_s&quot;:38.232,&quot;estimated_lag_s&quot;:6.0315,&quot;batch_number&quot;:715},{&quot;elapsed_s&quot;:38.4569,&quot;estimated_lag_s&quot;:6.105,&quot;batch_number&quot;:716},{&quot;elapsed_s&quot;:38.5954,&quot;estimated_lag_s&quot;:6.1418,&quot;batch_number&quot;:717},{&quot;elapsed_s&quot;:38.713,&quot;estimated_lag_s&quot;:6.1574,&quot;batch_number&quot;:718},{&quot;elapsed_s&quot;:38.8042,&quot;estimated_lag_s&quot;:6.2065,&quot;batch_number&quot;:719},{&quot;elapsed_s&quot;:38.9131,&quot;estimated_lag_s&quot;:6.2742,&quot;batch_number&quot;:720},{&quot;elapsed_s&quot;:39.114,&quot;estimated_lag_s&quot;:6.414,&quot;batch_number&quot;:721},{&quot;elapsed_s&quot;:39.3835,&quot;estimated_lag_s&quot;:6.5988,&quot;batch_number&quot;:722},{&quot;elapsed_s&quot;:39.6564,&quot;estimated_lag_s&quot;:6.7438,&quot;batch_number&quot;:723},{&quot;elapsed_s&quot;:39.8304,&quot;estimated_lag_s&quot;:6.8313,&quot;batch_number&quot;:724},{&quot;elapsed_s&quot;:39.9359,&quot;estimated_lag_s&quot;:6.7091,&quot;batch_number&quot;:725},{&quot;elapsed_s&quot;:40.2244,&quot;estimated_lag_s&quot;:6.7537,&quot;batch_number&quot;:726},{&quot;elapsed_s&quot;:40.5064,&quot;estimated_lag_s&quot;:6.9368,&quot;batch_number&quot;:727},{&quot;elapsed_s&quot;:40.7968,&quot;estimated_lag_s&quot;:7.0921,&quot;batch_number&quot;:728},{&quot;elapsed_s&quot;:41.095,&quot;estimated_lag_s&quot;:7.3322,&quot;batch_number&quot;:729},{&quot;elapsed_s&quot;:41.3349,&quot;estimated_lag_s&quot;:7.5362,&quot;batch_number&quot;:730},{&quot;elapsed_s&quot;:41.5765,&quot;estimated_lag_s&quot;:7.7476,&quot;batch_number&quot;:731},{&quot;elapsed_s&quot;:41.8478,&quot;estimated_lag_s&quot;:7.97,&quot;batch_number&quot;:732},{&quot;elapsed_s&quot;:42.065,&quot;estimated_lag_s&quot;:8.1386,&quot;batch_number&quot;:733},{&quot;elapsed_s&quot;:42.298,&quot;estimated_lag_s&quot;:8.1058,&quot;batch_number&quot;:734},{&quot;elapsed_s&quot;:42.4934,&quot;estimated_lag_s&quot;:8.1681,&quot;batch_number&quot;:735},{&quot;elapsed_s&quot;:42.6761,&quot;estimated_lag_s&quot;:8.2273,&quot;batch_number&quot;:736},{&quot;elapsed_s&quot;:42.8733,&quot;estimated_lag_s&quot;:8.2743,&quot;batch_number&quot;:737},{&quot;elapsed_s&quot;:43.0682,&quot;estimated_lag_s&quot;:8.3123,&quot;batch_number&quot;:738},{&quot;elapsed_s&quot;:43.2224,&quot;estimated_lag_s&quot;:8.4299,&quot;batch_number&quot;:739},{&quot;elapsed_s&quot;:43.3816,&quot;estimated_lag_s&quot;:8.5552,&quot;batch_number&quot;:740},{&quot;elapsed_s&quot;:43.551,&quot;estimated_lag_s&quot;:8.6724,&quot;batch_number&quot;:741},{&quot;elapsed_s&quot;:43.7163,&quot;estimated_lag_s&quot;:8.8035,&quot;batch_number&quot;:742},{&quot;elapsed_s&quot;:43.895,&quot;estimated_lag_s&quot;:8.9418,&quot;batch_number&quot;:743},{&quot;elapsed_s&quot;:44.1076,&quot;estimated_lag_s&quot;:9.0626,&quot;batch_number&quot;:744},{&quot;elapsed_s&quot;:44.3681,&quot;estimated_lag_s&quot;:9.2358,&quot;batch_number&quot;:745},{&quot;elapsed_s&quot;:44.6068,&quot;estimated_lag_s&quot;:9.4048,&quot;batch_number&quot;:746},{&quot;elapsed_s&quot;:44.845,&quot;estimated_lag_s&quot;:9.5787,&quot;batch_number&quot;:747},{&quot;elapsed_s&quot;:45.1222,&quot;estimated_lag_s&quot;:9.7804,&quot;batch_number&quot;:748},{&quot;elapsed_s&quot;:45.337,&quot;estimated_lag_s&quot;:9.8699,&quot;batch_number&quot;:749},{&quot;elapsed_s&quot;:45.5374,&quot;estimated_lag_s&quot;:9.965,&quot;batch_number&quot;:750},{&quot;elapsed_s&quot;:45.7561,&quot;estimated_lag_s&quot;:10.0678,&quot;batch_number&quot;:751},{&quot;elapsed_s&quot;:46.0469,&quot;estimated_lag_s&quot;:10.2068,&quot;batch_number&quot;:752},{&quot;elapsed_s&quot;:46.2267,&quot;estimated_lag_s&quot;:10.2749,&quot;batch_number&quot;:753},{&quot;elapsed_s&quot;:46.5134,&quot;estimated_lag_s&quot;:10.2532,&quot;batch_number&quot;:754},{&quot;elapsed_s&quot;:46.7667,&quot;estimated_lag_s&quot;:10.125,&quot;batch_number&quot;:755},{&quot;elapsed_s&quot;:47.0379,&quot;estimated_lag_s&quot;:10.118,&quot;batch_number&quot;:756},{&quot;elapsed_s&quot;:47.2855,&quot;estimated_lag_s&quot;:10.1484,&quot;batch_number&quot;:757},{&quot;elapsed_s&quot;:47.5434,&quot;estimated_lag_s&quot;:10.2456,&quot;batch_number&quot;:758},{&quot;elapsed_s&quot;:47.8119,&quot;estimated_lag_s&quot;:10.333,&quot;batch_number&quot;:759},{&quot;elapsed_s&quot;:48.0433,&quot;estimated_lag_s&quot;:10.2935,&quot;batch_number&quot;:760},{&quot;elapsed_s&quot;:48.3403,&quot;estimated_lag_s&quot;:10.5573,&quot;batch_number&quot;:761},{&quot;elapsed_s&quot;:48.8017,&quot;estimated_lag_s&quot;:10.9926,&quot;batch_number&quot;:762},{&quot;elapsed_s&quot;:49.1434,&quot;estimated_lag_s&quot;:11.2988,&quot;batch_number&quot;:763},{&quot;elapsed_s&quot;:49.4635,&quot;estimated_lag_s&quot;:11.5215,&quot;batch_number&quot;:764},{&quot;elapsed_s&quot;:49.7619,&quot;estimated_lag_s&quot;:11.619,&quot;batch_number&quot;:765},{&quot;elapsed_s&quot;:49.934,&quot;estimated_lag_s&quot;:11.6098,&quot;batch_number&quot;:766},{&quot;elapsed_s&quot;:50.1559,&quot;estimated_lag_s&quot;:11.7723,&quot;batch_number&quot;:767},{&quot;elapsed_s&quot;:50.3576,&quot;estimated_lag_s&quot;:11.9234,&quot;batch_number&quot;:768},{&quot;elapsed_s&quot;:50.5222,&quot;estimated_lag_s&quot;:12.0215,&quot;batch_number&quot;:769},{&quot;elapsed_s&quot;:50.6786,&quot;estimated_lag_s&quot;:11.861,&quot;batch_number&quot;:770},{&quot;elapsed_s&quot;:50.9227,&quot;estimated_lag_s&quot;:11.4787,&quot;batch_number&quot;:771},{&quot;elapsed_s&quot;:51.2163,&quot;estimated_lag_s&quot;:11.1841,&quot;batch_number&quot;:772},{&quot;elapsed_s&quot;:51.5869,&quot;estimated_lag_s&quot;:11.4958,&quot;batch_number&quot;:773},{&quot;elapsed_s&quot;:51.9009,&quot;estimated_lag_s&quot;:11.7765,&quot;batch_number&quot;:774},{&quot;elapsed_s&quot;:52.2417,&quot;estimated_lag_s&quot;:12.0849,&quot;batch_number&quot;:775},{&quot;elapsed_s&quot;:52.5193,&quot;estimated_lag_s&quot;:12.1604,&quot;batch_number&quot;:776},{&quot;elapsed_s&quot;:52.9329,&quot;estimated_lag_s&quot;:12.438,&quot;batch_number&quot;:777},{&quot;elapsed_s&quot;:53.3709,&quot;estimated_lag_s&quot;:12.8091,&quot;batch_number&quot;:778},{&quot;elapsed_s&quot;:53.682,&quot;estimated_lag_s&quot;:12.9803,&quot;batch_number&quot;:779},{&quot;elapsed_s&quot;:54.0149,&quot;estimated_lag_s&quot;:13.2273,&quot;batch_number&quot;:780},{&quot;elapsed_s&quot;:54.3508,&quot;estimated_lag_s&quot;:13.5032,&quot;batch_number&quot;:781},{&quot;elapsed_s&quot;:54.5974,&quot;estimated_lag_s&quot;:13.6769,&quot;batch_number&quot;:782},{&quot;elapsed_s&quot;:54.8212,&quot;estimated_lag_s&quot;:13.8224,&quot;batch_number&quot;:783},{&quot;elapsed_s&quot;:55.1057,&quot;estimated_lag_s&quot;:14.0527,&quot;batch_number&quot;:784},{&quot;elapsed_s&quot;:55.3328,&quot;estimated_lag_s&quot;:14.2333,&quot;batch_number&quot;:785},{&quot;elapsed_s&quot;:55.5893,&quot;estimated_lag_s&quot;:14.4334,&quot;batch_number&quot;:786},{&quot;elapsed_s&quot;:55.8383,&quot;estimated_lag_s&quot;:14.6037,&quot;batch_number&quot;:787},{&quot;elapsed_s&quot;:56.0394,&quot;estimated_lag_s&quot;:14.5292,&quot;batch_number&quot;:788},{&quot;elapsed_s&quot;:56.2343,&quot;estimated_lag_s&quot;:14.5022,&quot;batch_number&quot;:789},{&quot;elapsed_s&quot;:56.4315,&quot;estimated_lag_s&quot;:14.5745,&quot;batch_number&quot;:790},{&quot;elapsed_s&quot;:56.6623,&quot;estimated_lag_s&quot;:14.6826,&quot;batch_number&quot;:791},{&quot;elapsed_s&quot;:56.8547,&quot;estimated_lag_s&quot;:14.6991,&quot;batch_number&quot;:792},{&quot;elapsed_s&quot;:57.0673,&quot;estimated_lag_s&quot;:14.7148,&quot;batch_number&quot;:793},{&quot;elapsed_s&quot;:57.2713,&quot;estimated_lag_s&quot;:14.6828,&quot;batch_number&quot;:794},{&quot;elapsed_s&quot;:57.428,&quot;estimated_lag_s&quot;:14.665,&quot;batch_number&quot;:795},{&quot;elapsed_s&quot;:57.6641,&quot;estimated_lag_s&quot;:14.785,&quot;batch_number&quot;:796},{&quot;elapsed_s&quot;:57.895,&quot;estimated_lag_s&quot;:14.9445,&quot;batch_number&quot;:797},{&quot;elapsed_s&quot;:58.1299,&quot;estimated_lag_s&quot;:15.1126,&quot;batch_number&quot;:798},{&quot;elapsed_s&quot;:58.3471,&quot;estimated_lag_s&quot;:15.2499,&quot;batch_number&quot;:799},{&quot;elapsed_s&quot;:58.6095,&quot;estimated_lag_s&quot;:15.437,&quot;batch_number&quot;:800},{&quot;elapsed_s&quot;:58.8899,&quot;estimated_lag_s&quot;:15.5687,&quot;batch_number&quot;:801},{&quot;elapsed_s&quot;:59.2033,&quot;estimated_lag_s&quot;:15.6947,&quot;batch_number&quot;:802},{&quot;elapsed_s&quot;:59.5557,&quot;estimated_lag_s&quot;:15.978,&quot;batch_number&quot;:803},{&quot;elapsed_s&quot;:59.7971,&quot;estimated_lag_s&quot;:15.9446,&quot;batch_number&quot;:804},{&quot;elapsed_s&quot;:60.0939,&quot;estimated_lag_s&quot;:16.0711,&quot;batch_number&quot;:805},{&quot;elapsed_s&quot;:60.3501,&quot;estimated_lag_s&quot;:16.1437,&quot;batch_number&quot;:806},{&quot;elapsed_s&quot;:60.6591,&quot;estimated_lag_s&quot;:16.2494,&quot;batch_number&quot;:807},{&quot;elapsed_s&quot;:60.9762,&quot;estimated_lag_s&quot;:16.4021,&quot;batch_number&quot;:808},{&quot;elapsed_s&quot;:61.2493,&quot;estimated_lag_s&quot;:16.5915,&quot;batch_number&quot;:809},{&quot;elapsed_s&quot;:61.4809,&quot;estimated_lag_s&quot;:16.7362,&quot;batch_number&quot;:810},{&quot;elapsed_s&quot;:61.6567,&quot;estimated_lag_s&quot;:16.8426,&quot;batch_number&quot;:811},{&quot;elapsed_s&quot;:61.8623,&quot;estimated_lag_s&quot;:16.9894,&quot;batch_number&quot;:812},{&quot;elapsed_s&quot;:62.1043,&quot;estimated_lag_s&quot;:17.1636,&quot;batch_number&quot;:813},{&quot;elapsed_s&quot;:62.296,&quot;estimated_lag_s&quot;:17.2517,&quot;batch_number&quot;:814},{&quot;elapsed_s&quot;:62.4877,&quot;estimated_lag_s&quot;:17.3127,&quot;batch_number&quot;:815},{&quot;elapsed_s&quot;:62.6844,&quot;estimated_lag_s&quot;:17.3961,&quot;batch_number&quot;:816},{&quot;elapsed_s&quot;:62.9157,&quot;estimated_lag_s&quot;:17.5017,&quot;batch_number&quot;:817},{&quot;elapsed_s&quot;:63.2108,&quot;estimated_lag_s&quot;:17.638,&quot;batch_number&quot;:818},{&quot;elapsed_s&quot;:63.458,&quot;estimated_lag_s&quot;:17.8034,&quot;batch_number&quot;:819},{&quot;elapsed_s&quot;:63.673,&quot;estimated_lag_s&quot;:17.8165,&quot;batch_number&quot;:820},{&quot;elapsed_s&quot;:63.912,&quot;estimated_lag_s&quot;:17.9766,&quot;batch_number&quot;:821},{&quot;elapsed_s&quot;:64.0684,&quot;estimated_lag_s&quot;:18.1021,&quot;batch_number&quot;:822},{&quot;elapsed_s&quot;:64.2141,&quot;estimated_lag_s&quot;:18.2111,&quot;batch_number&quot;:823},{&quot;elapsed_s&quot;:64.3845,&quot;estimated_lag_s&quot;:18.3505,&quot;batch_number&quot;:824},{&quot;elapsed_s&quot;:64.5534,&quot;estimated_lag_s&quot;:18.483,&quot;batch_number&quot;:825},{&quot;elapsed_s&quot;:64.7949,&quot;estimated_lag_s&quot;:18.647,&quot;batch_number&quot;:826},{&quot;elapsed_s&quot;:65.0067,&quot;estimated_lag_s&quot;:18.4967,&quot;batch_number&quot;:827},{&quot;elapsed_s&quot;:65.2863,&quot;estimated_lag_s&quot;:18.562,&quot;batch_number&quot;:828},{&quot;elapsed_s&quot;:65.6005,&quot;estimated_lag_s&quot;:18.6464,&quot;batch_number&quot;:829},{&quot;elapsed_s&quot;:65.8354,&quot;estimated_lag_s&quot;:18.5817,&quot;batch_number&quot;:830},{&quot;elapsed_s&quot;:66.0932,&quot;estimated_lag_s&quot;:18.681,&quot;batch_number&quot;:831},{&quot;elapsed_s&quot;:66.3824,&quot;estimated_lag_s&quot;:18.8993,&quot;batch_number&quot;:832},{&quot;elapsed_s&quot;:66.6288,&quot;estimated_lag_s&quot;:18.9109,&quot;batch_number&quot;:833},{&quot;elapsed_s&quot;:66.9082,&quot;estimated_lag_s&quot;:19.1468,&quot;batch_number&quot;:834},{&quot;elapsed_s&quot;:67.1989,&quot;estimated_lag_s&quot;:19.4165,&quot;batch_number&quot;:835},{&quot;elapsed_s&quot;:67.572,&quot;estimated_lag_s&quot;:19.7733,&quot;batch_number&quot;:836},{&quot;elapsed_s&quot;:67.9478,&quot;estimated_lag_s&quot;:20.1322,&quot;batch_number&quot;:837},{&quot;elapsed_s&quot;:68.2242,&quot;estimated_lag_s&quot;:20.3813,&quot;batch_number&quot;:838},{&quot;elapsed_s&quot;:68.4486,&quot;estimated_lag_s&quot;:20.5359,&quot;batch_number&quot;:839},{&quot;elapsed_s&quot;:68.7611,&quot;estimated_lag_s&quot;:18.7193,&quot;batch_number&quot;:840},{&quot;elapsed_s&quot;:68.9873,&quot;estimated_lag_s&quot;:18.1046,&quot;batch_number&quot;:841},{&quot;elapsed_s&quot;:69.2276,&quot;estimated_lag_s&quot;:17.9296,&quot;batch_number&quot;:842},{&quot;elapsed_s&quot;:69.4035,&quot;estimated_lag_s&quot;:17.1989,&quot;batch_number&quot;:843},{&quot;elapsed_s&quot;:69.6382,&quot;estimated_lag_s&quot;:17.1531,&quot;batch_number&quot;:844},{&quot;elapsed_s&quot;:69.8279,&quot;estimated_lag_s&quot;:17.0091,&quot;batch_number&quot;:845},{&quot;elapsed_s&quot;:70.0475,&quot;estimated_lag_s&quot;:17.1056,&quot;batch_number&quot;:846},{&quot;elapsed_s&quot;:70.2964,&quot;estimated_lag_s&quot;:17.0618,&quot;batch_number&quot;:847},{&quot;elapsed_s&quot;:70.5103,&quot;estimated_lag_s&quot;:17.222,&quot;batch_number&quot;:848},{&quot;elapsed_s&quot;:70.7699,&quot;estimated_lag_s&quot;:17.4412,&quot;batch_number&quot;:849},{&quot;elapsed_s&quot;:71.0174,&quot;estimated_lag_s&quot;:17.6388,&quot;batch_number&quot;:850},{&quot;elapsed_s&quot;:71.1967,&quot;estimated_lag_s&quot;:17.7687,&quot;batch_number&quot;:851},{&quot;elapsed_s&quot;:71.3707,&quot;estimated_lag_s&quot;:17.908,&quot;batch_number&quot;:852},{&quot;elapsed_s&quot;:71.536,&quot;estimated_lag_s&quot;:18.0507,&quot;batch_number&quot;:853},{&quot;elapsed_s&quot;:71.6777,&quot;estimated_lag_s&quot;:18.1657,&quot;batch_number&quot;:854},{&quot;elapsed_s&quot;:71.8051,&quot;estimated_lag_s&quot;:18.268,&quot;batch_number&quot;:855},{&quot;elapsed_s&quot;:71.9485,&quot;estimated_lag_s&quot;:18.3902,&quot;batch_number&quot;:856},{&quot;elapsed_s&quot;:72.0853,&quot;estimated_lag_s&quot;:18.5093,&quot;batch_number&quot;:857},{&quot;elapsed_s&quot;:72.2449,&quot;estimated_lag_s&quot;:18.6507,&quot;batch_number&quot;:858},{&quot;elapsed_s&quot;:72.4,&quot;estimated_lag_s&quot;:18.7895,&quot;batch_number&quot;:859},{&quot;elapsed_s&quot;:72.5494,&quot;estimated_lag_s&quot;:18.9225,&quot;batch_number&quot;:860},{&quot;elapsed_s&quot;:72.7153,&quot;estimated_lag_s&quot;:19.0721,&quot;batch_number&quot;:861},{&quot;elapsed_s&quot;:72.8618,&quot;estimated_lag_s&quot;:19.2021,&quot;batch_number&quot;:862},{&quot;elapsed_s&quot;:73.0265,&quot;estimated_lag_s&quot;:19.3406,&quot;batch_number&quot;:863},{&quot;elapsed_s&quot;:73.171,&quot;estimated_lag_s&quot;:14.9682,&quot;batch_number&quot;:864},{&quot;elapsed_s&quot;:73.3277,&quot;estimated_lag_s&quot;:10.1375,&quot;batch_number&quot;:865},{&quot;elapsed_s&quot;:73.4093,&quot;estimated_lag_s&quot;:0.1284,&quot;batch_number&quot;:866},{&quot;elapsed_s&quot;:73.854,&quot;estimated_lag_s&quot;:-0.0063,&quot;batch_number&quot;:909},{&quot;elapsed_s&quot;:104.1927,&quot;estimated_lag_s&quot;:-0.0014,&quot;batch_number&quot;:3877},{&quot;elapsed_s&quot;:104.2234,&quot;estimated_lag_s&quot;:-0.0058,&quot;batch_number&quot;:3880},{&quot;elapsed_s&quot;:104.3612,&quot;estimated_lag_s&quot;:-0.011,&quot;batch_number&quot;:3893},{&quot;elapsed_s&quot;:104.3768,&quot;estimated_lag_s&quot;:-0.0067,&quot;batch_number&quot;:3894},{&quot;elapsed_s&quot;:104.3941,&quot;estimated_lag_s&quot;:0.0063,&quot;batch_number&quot;:3895},{&quot;elapsed_s&quot;:104.4146,&quot;estimated_lag_s&quot;:-0.0028,&quot;batch_number&quot;:3897},{&quot;elapsed_s&quot;:104.4316,&quot;estimated_lag_s&quot;:-0.0056,&quot;batch_number&quot;:3898},{&quot;elapsed_s&quot;:104.4623,&quot;estimated_lag_s&quot;:-0.0076,&quot;batch_number&quot;:3901},{&quot;elapsed_s&quot;:104.4729,&quot;estimated_lag_s&quot;:-0.0085,&quot;batch_number&quot;:3902},{&quot;elapsed_s&quot;:104.4896,&quot;estimated_lag_s&quot;:0.0027,&quot;batch_number&quot;:3903},{&quot;elapsed_s&quot;:104.5916,&quot;estimated_lag_s&quot;:-0.0089,&quot;batch_number&quot;:3913},{&quot;elapsed_s&quot;:104.6529,&quot;estimated_lag_s&quot;:-0.0099,&quot;batch_number&quot;:3919},{&quot;elapsed_s&quot;:104.6787,&quot;estimated_lag_s&quot;:0.0061,&quot;batch_number&quot;:3920},{&quot;elapsed_s&quot;:104.6954,&quot;estimated_lag_s&quot;:-0.0041,&quot;batch_number&quot;:3921},{&quot;elapsed_s&quot;:104.7159,&quot;estimated_lag_s&quot;:-0.007,&quot;batch_number&quot;:3923},{&quot;elapsed_s&quot;:104.7331,&quot;estimated_lag_s&quot;:0.0028,&quot;batch_number&quot;:3924},{&quot;elapsed_s&quot;:104.7434,&quot;estimated_lag_s&quot;:-0.0095,&quot;batch_number&quot;:3925},{&quot;elapsed_s&quot;:104.7741,&quot;estimated_lag_s&quot;:-0.0113,&quot;batch_number&quot;:3928},{&quot;elapsed_s&quot;:104.7929,&quot;estimated_lag_s&quot;:-0.0022,&quot;batch_number&quot;:3929},{&quot;elapsed_s&quot;:104.9465,&quot;estimated_lag_s&quot;:-0.0073,&quot;batch_number&quot;:3944},{&quot;elapsed_s&quot;:104.9842,&quot;estimated_lag_s&quot;:0.0028,&quot;batch_number&quot;:3947},{&quot;elapsed_s&quot;:105.0354,&quot;estimated_lag_s&quot;:-0.0039,&quot;batch_number&quot;:3952},{&quot;elapsed_s&quot;:105.0661,&quot;estimated_lag_s&quot;:-0.0106,&quot;batch_number&quot;:3955},{&quot;elapsed_s&quot;:105.0968,&quot;estimated_lag_s&quot;:-0.0071,&quot;batch_number&quot;:3958},{&quot;elapsed_s&quot;:105.1276,&quot;estimated_lag_s&quot;:-0.0079,&quot;batch_number&quot;:3961},{&quot;elapsed_s&quot;:105.1463,&quot;estimated_lag_s&quot;:0.0036,&quot;batch_number&quot;:3962},{&quot;elapsed_s&quot;:105.1619,&quot;estimated_lag_s&quot;:-0.0033,&quot;batch_number&quot;:3963},{&quot;elapsed_s&quot;:105.1723,&quot;estimated_lag_s&quot;:-0.0169,&quot;batch_number&quot;:3964},{&quot;elapsed_s&quot;:105.1827,&quot;estimated_lag_s&quot;:-0.017,&quot;batch_number&quot;:3965},{&quot;elapsed_s&quot;:105.2004,&quot;estimated_lag_s&quot;:-0.0033,&quot;batch_number&quot;:3966},{&quot;elapsed_s&quot;:105.2414,&quot;estimated_lag_s&quot;:-0.0175,&quot;batch_number&quot;:3970},{&quot;elapsed_s&quot;:105.2575,&quot;estimated_lag_s&quot;:-0.0103,&quot;batch_number&quot;:3971},{&quot;elapsed_s&quot;:105.3086,&quot;estimated_lag_s&quot;:-0.0108,&quot;batch_number&quot;:3976},{&quot;elapsed_s&quot;:105.3188,&quot;estimated_lag_s&quot;:-0.0038,&quot;batch_number&quot;:3977},{&quot;elapsed_s&quot;:105.4553,&quot;estimated_lag_s&quot;:0.0035,&quot;batch_number&quot;:3990}],&quot;fullBatchWindow&quot;:[17.315,73.328],&quot;hitElapsed&quot;:48.746,&quot;time&quot;:[{&quot;name&quot;:&quot;等待事件&quot;,&quot;seconds&quot;:39.5671},{&quot;name&quot;:&quot;事件处理&quot;,&quot;seconds&quot;:53.9564},{&quot;name&quot;:&quot;写日志&quot;,&quot;seconds&quot;:2.5524},{&quot;name&quot;:&quot;状态输出&quot;,&quot;seconds&quot;:0.0405},{&quot;name&quot;:&quot;其他&quot;,&quot;seconds&quot;:0.0533}],&quot;latency&quot;:[{&quot;name&quot;:&quot;无候选&quot;,&quot;p50&quot;:1.99,&quot;p95&quot;:3.0231,&quot;max&quot;:23.5191},{&quot;name&quot;:&quot;full 候选&quot;,&quot;p50&quot;:3.6813,&quot;p95&quot;:4.985,&quot;max&quot;:8.1722},{&quot;name&quot;:&quot;upper 候选&quot;,&quot;p50&quot;:3.3455,&quot;p95&quot;:4.2389,&quot;max&quot;:7.9179},{&quot;name&quot;:&quot;最终输出&quot;,&quot;p50&quot;:4.9163,&quot;p95&quot;:5.0882,&quot;max&quot;:5.1982}],&quot;funnel&quot;:{&quot;stages&quot;:[&quot;候选&quot;,&quot;几何通过&quot;,&quot;置信度≥0.3&quot;,&quot;最终输出&quot;],&quot;full&quot;:[2585,1212,57,33],&quot;upper&quot;:[3858,2093,0,0]},&quot;confidence&quot;:{&quot;full&quot;:[{&quot;x&quot;:0.01,&quot;count&quot;:0},{&quot;x&quot;:0.03,&quot;count&quot;:0},{&quot;x&quot;:0.05,&quot;count&quot;:0},{&quot;x&quot;:0.07,&quot;count&quot;:682},{&quot;x&quot;:0.09,&quot;count&quot;:899},{&quot;x&quot;:0.11,&quot;count&quot;:342},{&quot;x&quot;:0.13,&quot;count&quot;:209},{&quot;x&quot;:0.15,&quot;count&quot;:165},{&quot;x&quot;:0.17,&quot;count&quot;:95},{&quot;x&quot;:0.19,&quot;count&quot;:41},{&quot;x&quot;:0.21,&quot;count&quot;:36},{&quot;x&quot;:0.23,&quot;count&quot;:18},{&quot;x&quot;:0.25,&quot;count&quot;:15},{&quot;x&quot;:0.27,&quot;count&quot;:14},{&quot;x&quot;:0.29,&quot;count&quot;:12},{&quot;x&quot;:0.31,&quot;count&quot;:8},{&quot;x&quot;:0.33,&quot;count&quot;:11},{&quot;x&quot;:0.35,&quot;count&quot;:13},{&quot;x&quot;:0.37,&quot;count&quot;:5},{&quot;x&quot;:0.39,&quot;count&quot;:4},{&quot;x&quot;:0.41,&quot;count&quot;:6},{&quot;x&quot;:0.43,&quot;count&quot;:1},{&quot;x&quot;:0.45,&quot;count&quot;:5},{&quot;x&quot;:0.47,&quot;count&quot;:0},{&quot;x&quot;:0.49,&quot;count&quot;:2},{&quot;x&quot;:0.51,&quot;count&quot;:2},{&quot;x&quot;:0.53,&quot;count&quot;:0},{&quot;x&quot;:0.55,&quot;count&quot;:0}],&quot;upper&quot;:[{&quot;x&quot;:0.01,&quot;count&quot;:0},{&quot;x&quot;:0.03,&quot;count&quot;:155},{&quot;x&quot;:0.05,&quot;count&quot;:1840},{&quot;x&quot;:0.07,&quot;count&quot;:1126},{&quot;x&quot;:0.09,&quot;count&quot;:416},{&quot;x&quot;:0.11,&quot;count&quot;:197},{&quot;x&quot;:0.13,&quot;count&quot;:67},{&quot;x&quot;:0.15,&quot;count&quot;:26},{&quot;x&quot;:0.17,&quot;count&quot;:10},{&quot;x&quot;:0.19,&quot;count&quot;:7},{&quot;x&quot;:0.21,&quot;count&quot;:13},{&quot;x&quot;:0.23,&quot;count&quot;:1},{&quot;x&quot;:0.25,&quot;count&quot;:0},{&quot;x&quot;:0.27,&quot;count&quot;:0},{&quot;x&quot;:0.29,&quot;count&quot;:0},{&quot;x&quot;:0.31,&quot;count&quot;:0},{&quot;x&quot;:0.33,&quot;count&quot;:0},{&quot;x&quot;:0.35,&quot;count&quot;:0},{&quot;x&quot;:0.37,&quot;count&quot;:0},{&quot;x&quot;:0.39,&quot;count&quot;:0},{&quot;x&quot;:0.41,&quot;count&quot;:0},{&quot;x&quot;:0.43,&quot;count&quot;:0},{&quot;x&quot;:0.45,&quot;count&quot;:0},{&quot;x&quot;:0.47,&quot;count&quot;:0},{&quot;x&quot;:0.49,&quot;count&quot;:0},{&quot;x&quot;:0.51,&quot;count&quot;:0},{&quot;x&quot;:0.53,&quot;count&quot;:0},{&quot;x&quot;:0.55,&quot;count&quot;:0}]},&quot;sectors&quot;:[{&quot;sector&quot;:&quot;1&quot;,&quot;zero_pct&quot;:10.54,&quot;q_median&quot;:1.0,&quot;qp_mean&quot;:0.5},{&quot;sector&quot;:&quot;2&quot;,&quot;zero_pct&quot;:21.81,&quot;q_median&quot;:0.8,&quot;qp_mean&quot;:0.409},{&quot;sector&quot;:&quot;5&quot;,&quot;zero_pct&quot;:40.77,&quot;q_median&quot;:0.23,&quot;qp_mean&quot;:0.298},{&quot;sector&quot;:&quot;6&quot;,&quot;zero_pct&quot;:21.6,&quot;q_median&quot;:0.8,&quot;qp_mean&quot;:0.404}],&quot;thresholds&quot;:[{&quot;threshold&quot;:0.1,&quot;full&quot;:587,&quot;upper&quot;:159},{&quot;threshold&quot;:0.15,&quot;full&quot;:211,&quot;upper&quot;:6},{&quot;threshold&quot;:0.2,&quot;full&quot;:95,&quot;upper&quot;:0},{&quot;threshold&quot;:0.25,&quot;full&quot;:54,&quot;upper&quot;:0},{&quot;threshold&quot;:0.3,&quot;full&quot;:33,&quot;upper&quot;:0}],&quot;accepted&quot;:[{&quot;cx&quot;:78.7594,&quot;cy&quot;:83.1927,&quot;radius&quot;:35.7226,&quot;xiaoiron_confidence&quot;:0.3251,&quot;timestamp_us&quot;:31179710.0,&quot;cluster&quot;:1},{&quot;cx&quot;:78.7594,&quot;cy&quot;:83.1927,&quot;radius&quot;:35.7226,&quot;xiaoiron_confidence&quot;:0.313,&quot;timestamp_us&quot;:31183665.0,&quot;cluster&quot;:1},{&quot;cx&quot;:78.7594,&quot;cy&quot;:83.1927,&quot;radius&quot;:35.7226,&quot;xiaoiron_confidence&quot;:0.3276,&quot;timestamp_us&quot;:31198783.0,&quot;cluster&quot;:1},{&quot;cx&quot;:78.7594,&quot;cy&quot;:83.1927,&quot;radius&quot;:35.7226,&quot;xiaoiron_confidence&quot;:0.3423,&quot;timestamp_us&quot;:31200650.0,&quot;cluster&quot;:1},{&quot;cx&quot;:78.7594,&quot;cy&quot;:83.1927,&quot;radius&quot;:35.7226,&quot;xiaoiron_confidence&quot;:0.3514,&quot;timestamp_us&quot;:31201631.0,&quot;cluster&quot;:1},{&quot;cx&quot;:79.0232,&quot;cy&quot;:83.2884,&quot;radius&quot;:35.9113,&quot;xiaoiron_confidence&quot;:0.3,&quot;timestamp_us&quot;:31203776.0,&quot;cluster&quot;:1},{&quot;cx&quot;:79.0232,&quot;cy&quot;:83.2884,&quot;radius&quot;:35.9113,&quot;xiaoiron_confidence&quot;:0.3093,&quot;timestamp_us&quot;:31206149.0,&quot;cluster&quot;:1},{&quot;cx&quot;:78.6973,&quot;cy&quot;:82.8862,&quot;radius&quot;:35.5508,&quot;xiaoiron_confidence&quot;:0.3396,&quot;timestamp_us&quot;:31207646.0,&quot;cluster&quot;:1},{&quot;cx&quot;:78.6973,&quot;cy&quot;:82.8862,&quot;radius&quot;:35.5508,&quot;xiaoiron_confidence&quot;:0.3382,&quot;timestamp_us&quot;:31208469.0,&quot;cluster&quot;:1},{&quot;cx&quot;:78.93,&quot;cy&quot;:82.9302,&quot;radius&quot;:35.6826,&quot;xiaoiron_confidence&quot;:0.3551,&quot;timestamp_us&quot;:31210038.0,&quot;cluster&quot;:1},{&quot;cx&quot;:78.5989,&quot;cy&quot;:82.6511,&quot;radius&quot;:35.3418,&quot;xiaoiron_confidence&quot;:0.447,&quot;timestamp_us&quot;:31211236.0,&quot;cluster&quot;:1},{&quot;cx&quot;:79.1192,&quot;cy&quot;:82.8041,&quot;radius&quot;:35.7692,&quot;xiaoiron_confidence&quot;:0.36,&quot;timestamp_us&quot;:31213873.0,&quot;cluster&quot;:1},{&quot;cx&quot;:78.7415,&quot;cy&quot;:82.5977,&quot;radius&quot;:35.4074,&quot;xiaoiron_confidence&quot;:0.3895,&quot;timestamp_us&quot;:31215191.0,&quot;cluster&quot;:1},{&quot;cx&quot;:78.7415,&quot;cy&quot;:82.5977,&quot;radius&quot;:35.4074,&quot;xiaoiron_confidence&quot;:0.3903,&quot;timestamp_us&quot;:31216079.0,&quot;cluster&quot;:1},{&quot;cx&quot;:78.438,&quot;cy&quot;:82.4133,&quot;radius&quot;:35.1008,&quot;xiaoiron_confidence&quot;:0.4429,&quot;timestamp_us&quot;:31217032.0,&quot;cluster&quot;:1},{&quot;cx&quot;:69.2166,&quot;cy&quot;:73.2714,&quot;radius&quot;:35.0452,&quot;xiaoiron_confidence&quot;:0.3719,&quot;timestamp_us&quot;:31644015.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.2094,&quot;cy&quot;:73.1994,&quot;radius&quot;:35.1469,&quot;xiaoiron_confidence&quot;:0.3555,&quot;timestamp_us&quot;:31644207.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.218,&quot;cy&quot;:73.1012,&quot;radius&quot;:35.2501,&quot;xiaoiron_confidence&quot;:0.3552,&quot;timestamp_us&quot;:31644399.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.2221,&quot;cy&quot;:72.9796,&quot;radius&quot;:35.3567,&quot;xiaoiron_confidence&quot;:0.3229,&quot;timestamp_us&quot;:31644591.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.2217,&quot;cy&quot;:72.8903,&quot;radius&quot;:35.4669,&quot;xiaoiron_confidence&quot;:0.3174,&quot;timestamp_us&quot;:31644783.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.2288,&quot;cy&quot;:72.8774,&quot;radius&quot;:35.573,&quot;xiaoiron_confidence&quot;:0.3166,&quot;timestamp_us&quot;:31644975.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.2088,&quot;cy&quot;:72.919,&quot;radius&quot;:35.6646,&quot;xiaoiron_confidence&quot;:0.3127,&quot;timestamp_us&quot;:31645167.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.4909,&quot;cy&quot;:73.5988,&quot;radius&quot;:39.2783,&quot;xiaoiron_confidence&quot;:0.3056,&quot;timestamp_us&quot;:31660926.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.435,&quot;cy&quot;:73.6466,&quot;radius&quot;:39.2373,&quot;xiaoiron_confidence&quot;:0.3184,&quot;timestamp_us&quot;:31661118.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.4113,&quot;cy&quot;:73.6574,&quot;radius&quot;:39.1995,&quot;xiaoiron_confidence&quot;:0.3349,&quot;timestamp_us&quot;:31661310.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.383,&quot;cy&quot;:73.6551,&quot;radius&quot;:39.1613,&quot;xiaoiron_confidence&quot;:0.3435,&quot;timestamp_us&quot;:31661597.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.3395,&quot;cy&quot;:73.6171,&quot;radius&quot;:39.1085,&quot;xiaoiron_confidence&quot;:0.3424,&quot;timestamp_us&quot;:31661862.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.2987,&quot;cy&quot;:73.6059,&quot;radius&quot;:39.042,&quot;xiaoiron_confidence&quot;:0.3315,&quot;timestamp_us&quot;:31662471.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.2696,&quot;cy&quot;:73.5336,&quot;radius&quot;:38.9671,&quot;xiaoiron_confidence&quot;:0.3365,&quot;timestamp_us&quot;:31662812.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.2268,&quot;cy&quot;:73.4538,&quot;radius&quot;:38.8812,&quot;xiaoiron_confidence&quot;:0.3434,&quot;timestamp_us&quot;:31663035.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.164,&quot;cy&quot;:73.3579,&quot;radius&quot;:38.7879,&quot;xiaoiron_confidence&quot;:0.3514,&quot;timestamp_us&quot;:31663549.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.1578,&quot;cy&quot;:73.2951,&quot;radius&quot;:38.7154,&quot;xiaoiron_confidence&quot;:0.3507,&quot;timestamp_us&quot;:31663903.0,&quot;cluster&quot;:2},{&quot;cx&quot;:69.1128,&quot;cy&quot;:73.2561,&quot;radius&quot;:38.6276,&quot;xiaoiron_confidence&quot;:0.3256,&quot;timestamp_us&quot;:31664171.0,&quot;cluster&quot;:2}],&quot;clusters&quot;:[{&quot;cluster&quot;:1,&quot;cx&quot;:78.759,&quot;cy&quot;:82.93,&quot;radius&quot;:35.723,&quot;count&quot;:15},{&quot;cluster&quot;:2,&quot;cx&quot;:69.224,&quot;cy&quot;:73.326,&quot;radius&quot;:38.752,&quot;count&quot;:18}],&quot;hit&quot;:{&quot;cx&quot;:69.4909,&quot;cy&quot;:73.5988,&quot;radius&quot;:39.2783,&quot;confidence&quot;:0.3056}};
+  const tooltip = document.getElementById(&#x27;runtime-log-overview-tooltip&#x27;);
+  const colors = [&#x27;var(--viz-series-1)&#x27;,&#x27;var(--viz-series-2)&#x27;,&#x27;var(--viz-series-3)&#x27;,&#x27;var(--viz-series-4)&#x27;,&#x27;var(--viz-series-5)&#x27;,&#x27;var(--viz-series-6)&#x27;];
+  const fmt0 = d3.format(&#x27;,.0f&#x27;);
+  const fmt1 = d3.format(&#x27;,.1f&#x27;);
+  const fmt2 = d3.format(&#x27;,.2f&#x27;);
+
+  function setup(id, height, ariaLabel) {
+    const node = document.getElementById(id);
+    const width = Math.max(320, Math.floor(node.getBoundingClientRect().width));
+    node.replaceChildren();
+    const svg = d3.select(node).append(&#x27;svg&#x27;).attr(&#x27;viewBox&#x27;, `0 0 ${width} ${height}`).attr(&#x27;role&#x27;,&#x27;img&#x27;).attr(&#x27;aria-label&#x27;, ariaLabel);
+    svg.append(&#x27;title&#x27;).text(ariaLabel);
+    return {node, svg, width, height};
+  }
+
+  function frame(svg, m, width, height) {
+    svg.append(&#x27;rect&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-frame&#x27;).attr(&#x27;data-chart-frame&#x27;,&#x27;true&#x27;)
+      .attr(&#x27;x&#x27;,m.left).attr(&#x27;y&#x27;,m.top).attr(&#x27;width&#x27;,width-m.left-m.right).attr(&#x27;height&#x27;,height-m.top-m.bottom);
+  }
+
+  function axes(svg, x, y, m, width, height, xLabel, yLabel, xTicks=5, yTicks=5) {
+    svg.append(&#x27;g&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-gridline&#x27;).attr(&#x27;transform&#x27;,`translate(${m.left},0)`)
+      .call(d3.axisLeft(y).ticks(yTicks).tickSize(-(width-m.left-m.right)).tickFormat(&#x27;&#x27;));
+    svg.append(&#x27;g&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-axis&#x27;).attr(&#x27;transform&#x27;,`translate(0,${height-m.bottom})`).call(d3.axisBottom(x).ticks(xTicks));
+    svg.append(&#x27;g&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-axis&#x27;).attr(&#x27;transform&#x27;,`translate(${m.left},0)`).call(d3.axisLeft(y).ticks(yTicks));
+    svg.append(&#x27;text&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-axis-title&#x27;).attr(&#x27;data-axis&#x27;,&#x27;x&#x27;).attr(&#x27;x&#x27;,(m.left+width-m.right)/2).attr(&#x27;y&#x27;,height-5).attr(&#x27;text-anchor&#x27;,&#x27;middle&#x27;).text(xLabel);
+    svg.append(&#x27;text&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-axis-title&#x27;).attr(&#x27;data-axis&#x27;,&#x27;y&#x27;).attr(&#x27;transform&#x27;,&#x27;rotate(-90)&#x27;).attr(&#x27;x&#x27;,-(m.top+height-m.bottom)/2).attr(&#x27;y&#x27;,14).attr(&#x27;text-anchor&#x27;,&#x27;middle&#x27;).text(yLabel);
+  }
+
+  function showTip(event, html) {
+    const rect = root.getBoundingClientRect();
+    tooltip.hidden = false;
+    tooltip.innerHTML = html;
+    const x = Math.min(rect.width - 270, Math.max(6, event.clientX - rect.left + 14));
+    const y = Math.max(6, event.clientY - rect.top + 14);
+    tooltip.style.left = `${x}px`; tooltip.style.top = `${y}px`;
+  }
+  function hideTip(){ tooltip.hidden = true; }
+
+  function interpolate(series, xValue, xKey, yKey) {
+    const i = d3.bisector(d =&gt; d[xKey]).center(series, xValue);
+    if (i &lt;= 0 || i &gt;= series.length - 1) return series[Math.max(0, Math.min(series.length-1, i))][yKey];
+    const a = series[i-1], b = series[i];
+    const t = (xValue-a[xKey]) / Math.max(1e-9, b[xKey]-a[xKey]);
+    return a[yKey] + t * (b[yKey]-a[yKey]);
+  }
+
+  function drawRate(){
+    const {svg,width,height}=setup(&#x27;runtime-rate-chart&#x27;,280,&#x27;事件输入率随程序时间变化，并与实时处理能力和输入率 P95 对比&#x27;);
+    const m={top:14,right:24,bottom:46,left:72};
+    const x=d3.scaleLinear().domain(d3.extent(data.rates,d=&gt;d.elapsed_s)).nice().range([m.left,width-m.right]);
+    const y=d3.scaleLinear().domain([0,d3.max(data.rates,d=&gt;d.layer4_events_per_s)*1.08]).nice().range([height-m.bottom,m.top]);
+    frame(svg,m,width,height); axes(svg,x,y,m,width,height,&#x27;程序启动后时间 (s)&#x27;,&#x27;事件率 (event/s)&#x27;,width&lt;420?4:6,5);
+    svg.append(&#x27;rect&#x27;).attr(&#x27;x&#x27;,x(data.fullBatchWindow[0])).attr(&#x27;y&#x27;,m.top).attr(&#x27;width&#x27;,Math.max(1,x(data.fullBatchWindow[1])-x(data.fullBatchWindow[0]))).attr(&#x27;height&#x27;,height-m.top-m.bottom).attr(&#x27;fill&#x27;,colors[2]).attr(&#x27;opacity&#x27;,0.08);
+    const line=d3.line().x(d=&gt;x(d.elapsed_s)).y(d=&gt;y(d.layer4_events_per_s));
+    svg.append(&#x27;path&#x27;).datum(data.rates).attr(&#x27;fill&#x27;,&#x27;none&#x27;).attr(&#x27;stroke&#x27;,colors[0]).attr(&#x27;stroke-width&#x27;,2).attr(&#x27;d&#x27;,line);
+    svg.append(&#x27;line&#x27;).attr(&#x27;x1&#x27;,m.left).attr(&#x27;x2&#x27;,width-m.right).attr(&#x27;y1&#x27;,y(data.summary.processingCapacity)).attr(&#x27;y2&#x27;,y(data.summary.processingCapacity)).attr(&#x27;stroke&#x27;,colors[1]).attr(&#x27;stroke-width&#x27;,2);
+    svg.append(&#x27;line&#x27;).attr(&#x27;x1&#x27;,m.left).attr(&#x27;x2&#x27;,width-m.right).attr(&#x27;y1&#x27;,y(data.summary.inputP95)).attr(&#x27;y2&#x27;,y(data.summary.inputP95)).attr(&#x27;stroke&#x27;,colors[3]).attr(&#x27;stroke-width&#x27;,1.5).attr(&#x27;stroke-dasharray&#x27;,&#x27;5 4&#x27;);
+    svg.append(&#x27;line&#x27;).attr(&#x27;x1&#x27;,x(data.hitElapsed)).attr(&#x27;x2&#x27;,x(data.hitElapsed)).attr(&#x27;y1&#x27;,m.top).attr(&#x27;y2&#x27;,height-m.bottom).attr(&#x27;stroke&#x27;,colors[4]).attr(&#x27;stroke-width&#x27;,1.5);
+    svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,width-m.right-4).attr(&#x27;y&#x27;,y(data.summary.processingCapacity)-5).attr(&#x27;text-anchor&#x27;,&#x27;end&#x27;).text(`处理能力 ${fmt0(data.summary.processingCapacity)}`);
+    svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,width-m.right-4).attr(&#x27;y&#x27;,y(data.summary.inputP95)-5).attr(&#x27;text-anchor&#x27;,&#x27;end&#x27;).text(`输入 P95 ${fmt0(data.summary.inputP95)}`);
+    svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,x(data.hitElapsed)+5).attr(&#x27;y&#x27;,m.top+14).text(&#x27;击球&#x27;);
+    const guide=svg.append(&#x27;line&#x27;).attr(&#x27;data-chart-hover-guide&#x27;,&#x27;true&#x27;).attr(&#x27;y1&#x27;,m.top).attr(&#x27;y2&#x27;,height-m.bottom).attr(&#x27;stroke&#x27;,&#x27;var(--foreground)&#x27;).attr(&#x27;opacity&#x27;,0);
+    svg.append(&#x27;rect&#x27;).attr(&#x27;data-chart-hit&#x27;,&#x27;true&#x27;).attr(&#x27;data-chart-hover-overlay&#x27;,&#x27;cross-series&#x27;).attr(&#x27;x&#x27;,m.left).attr(&#x27;y&#x27;,m.top).attr(&#x27;width&#x27;,width-m.left-m.right).attr(&#x27;height&#x27;,height-m.top-m.bottom).attr(&#x27;fill&#x27;,&#x27;transparent&#x27;)
+      .on(&#x27;pointermove&#x27;,event=&gt;{const xv=Math.max(x.domain()[0],Math.min(x.domain()[1],x.invert(d3.pointer(event)[0]))); const value=interpolate(data.rates,xv,&#x27;elapsed_s&#x27;,&#x27;layer4_events_per_s&#x27;); guide.attr(&#x27;x1&#x27;,x(xv)).attr(&#x27;x2&#x27;,x(xv)).attr(&#x27;opacity&#x27;,0.65); showTip(event,`时间 &lt;b&gt;${fmt2(xv)} s&lt;/b&gt;&lt;br&gt;输入率 &lt;b&gt;${fmt0(value)} event/s&lt;/b&gt;&lt;br&gt;处理能力 ${fmt0(data.summary.processingCapacity)} event/s`);})
+      .on(&#x27;pointerleave&#x27;,()=&gt;{guide.attr(&#x27;opacity&#x27;,0);hideTip();});
+  }
+
+  function drawLag(){
+    const {svg,width,height}=setup(&#x27;runtime-lag-chart&#x27;,280,&#x27;根据墙钟和事件时间戳推算的处理积压，峰值约 20.5 秒&#x27;);
+    const m={top:14,right:24,bottom:46,left:64};
+    const x=d3.scaleLinear().domain(d3.extent(data.lag,d=&gt;d.elapsed_s)).nice().range([m.left,width-m.right]);
+    const y=d3.scaleLinear().domain([Math.min(0,d3.min(data.lag,d=&gt;d.estimated_lag_s)),d3.max(data.lag,d=&gt;d.estimated_lag_s)*1.08]).nice().range([height-m.bottom,m.top]);
+    frame(svg,m,width,height); axes(svg,x,y,m,width,height,&#x27;程序启动后时间 (s)&#x27;,&#x27;估算积压 (s)&#x27;,width&lt;420?4:6,5);
+    const area=d3.area().x(d=&gt;x(d.elapsed_s)).y0(y(0)).y1(d=&gt;y(d.estimated_lag_s));
+    const line=d3.line().x(d=&gt;x(d.elapsed_s)).y(d=&gt;y(d.estimated_lag_s));
+    svg.append(&#x27;path&#x27;).datum(data.lag).attr(&#x27;fill&#x27;,colors[0]).attr(&#x27;opacity&#x27;,0.12).attr(&#x27;d&#x27;,area);
+    svg.append(&#x27;path&#x27;).datum(data.lag).attr(&#x27;fill&#x27;,&#x27;none&#x27;).attr(&#x27;stroke&#x27;,colors[0]).attr(&#x27;stroke-width&#x27;,2).attr(&#x27;d&#x27;,line);
+    svg.append(&#x27;circle&#x27;).attr(&#x27;cx&#x27;,x(data.summary.maxLagElapsed)).attr(&#x27;cy&#x27;,y(data.summary.maxLag)).attr(&#x27;r&#x27;,4).attr(&#x27;fill&#x27;,colors[3]);
+    svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,x(data.summary.maxLagElapsed)-6).attr(&#x27;y&#x27;,y(data.summary.maxLag)-8).attr(&#x27;text-anchor&#x27;,&#x27;end&#x27;).text(`峰值 ${fmt1(data.summary.maxLag)} s`);
+    const guide=svg.append(&#x27;line&#x27;).attr(&#x27;data-chart-hover-guide&#x27;,&#x27;true&#x27;).attr(&#x27;y1&#x27;,m.top).attr(&#x27;y2&#x27;,height-m.bottom).attr(&#x27;stroke&#x27;,&#x27;var(--foreground)&#x27;).attr(&#x27;opacity&#x27;,0);
+    svg.append(&#x27;rect&#x27;).attr(&#x27;data-chart-hit&#x27;,&#x27;true&#x27;).attr(&#x27;data-chart-hover-overlay&#x27;,&#x27;cross-series&#x27;).attr(&#x27;x&#x27;,m.left).attr(&#x27;y&#x27;,m.top).attr(&#x27;width&#x27;,width-m.left-m.right).attr(&#x27;height&#x27;,height-m.top-m.bottom).attr(&#x27;fill&#x27;,&#x27;transparent&#x27;)
+      .on(&#x27;pointermove&#x27;,event=&gt;{const xv=Math.max(x.domain()[0],Math.min(x.domain()[1],x.invert(d3.pointer(event)[0]))); const value=interpolate(data.lag,xv,&#x27;elapsed_s&#x27;,&#x27;estimated_lag_s&#x27;); guide.attr(&#x27;x1&#x27;,x(xv)).attr(&#x27;x2&#x27;,x(xv)).attr(&#x27;opacity&#x27;,0.65); showTip(event,`时间 &lt;b&gt;${fmt2(xv)} s&lt;/b&gt;&lt;br&gt;估算积压 &lt;b&gt;${fmt2(value)} s&lt;/b&gt;`);})
+      .on(&#x27;pointerleave&#x27;,()=&gt;{guide.attr(&#x27;opacity&#x27;,0);hideTip();});
+  }
+
+  function drawTime(){
+    const {svg,width,height}=setup(&#x27;runtime-time-chart&#x27;,250,&#x27;主循环总时间中事件处理占 56.1%，等待事件占 41.1%，写日志占 2.7%&#x27;);
+    const m={top:44,right:18,bottom:52,left:18}; const total=d3.sum(data.time,d=&gt;d.seconds); let cursor=m.left;
+    const usable=width-m.left-m.right;
+    data.time.forEach((d,i)=&gt;{const w=usable*d.seconds/total; svg.append(&#x27;rect&#x27;).attr(&#x27;x&#x27;,cursor).attr(&#x27;y&#x27;,86).attr(&#x27;width&#x27;,Math.max(0,w)).attr(&#x27;height&#x27;,44).attr(&#x27;fill&#x27;,colors[i%colors.length]); if(w&gt;42){svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,cursor+w/2).attr(&#x27;y&#x27;,112).attr(&#x27;text-anchor&#x27;,&#x27;middle&#x27;).text(`${fmt1(d.seconds/total*100)}%`);} cursor+=w;});
+    svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,m.left).attr(&#x27;y&#x27;,32).text(`总循环时间 ${fmt1(total)} s`);
+    let lx=m.left, ly=168;
+    data.time.forEach((d,i)=&gt;{const label=`${d.name} ${fmt2(d.seconds)} s`; const approx=label.length*13+34; if(lx+approx&gt;width-m.right){lx=m.left;ly+=28;} svg.append(&#x27;rect&#x27;).attr(&#x27;x&#x27;,lx).attr(&#x27;y&#x27;,ly-10).attr(&#x27;width&#x27;,16).attr(&#x27;height&#x27;,8).attr(&#x27;fill&#x27;,colors[i%colors.length]); svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,lx+22).attr(&#x27;y&#x27;,ly).text(label); lx+=approx;});
+    svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,width/2).attr(&#x27;y&#x27;,height-8).attr(&#x27;text-anchor&#x27;,&#x27;middle&#x27;).text(&#x27;事件处理 56.1% 是主瓶颈；写日志仅 2.7%&#x27;);
+  }
+
+  function drawLatency(){
+    const {svg,width,height}=setup(&#x27;runtime-latency-chart&#x27;,280,&#x27;无候选、full 候选、upper 候选和最终输出的检测耗时中位数与 P95&#x27;);
+    const m={top:20,right:24,bottom:70,left:64};
+    const x=d3.scaleBand().domain(data.latency.map(d=&gt;d.name)).range([m.left,width-m.right]).padding(0.34);
+    const y=d3.scaleLinear().domain([0,d3.max(data.latency,d=&gt;d.p95)*1.18]).nice().range([height-m.bottom,m.top]);
+    frame(svg,m,width,height); svg.append(&#x27;g&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-gridline&#x27;).attr(&#x27;transform&#x27;,`translate(${m.left},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(width-m.left-m.right)).tickFormat(&#x27;&#x27;));
+    svg.append(&#x27;g&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-axis&#x27;).attr(&#x27;transform&#x27;,`translate(0,${height-m.bottom})`).call(d3.axisBottom(x)); svg.append(&#x27;g&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-axis&#x27;).attr(&#x27;transform&#x27;,`translate(${m.left},0)`).call(d3.axisLeft(y).ticks(5));
+    svg.append(&#x27;text&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-axis-title&#x27;).attr(&#x27;data-axis&#x27;,&#x27;y&#x27;).attr(&#x27;transform&#x27;,&#x27;rotate(-90)&#x27;).attr(&#x27;x&#x27;,-(m.top+height-m.bottom)/2).attr(&#x27;y&#x27;,14).attr(&#x27;text-anchor&#x27;,&#x27;middle&#x27;).text(&#x27;耗时 (ms)&#x27;);
+    data.latency.forEach((d,i)=&gt;{const cx=x(d.name)+x.bandwidth()/2; svg.append(&#x27;line&#x27;).attr(&#x27;x1&#x27;,cx).attr(&#x27;x2&#x27;,cx).attr(&#x27;y1&#x27;,y(d.p50)).attr(&#x27;y2&#x27;,y(d.p95)).attr(&#x27;stroke&#x27;,colors[i%colors.length]).attr(&#x27;stroke-width&#x27;,3); svg.append(&#x27;circle&#x27;).attr(&#x27;cx&#x27;,cx).attr(&#x27;cy&#x27;,y(d.p50)).attr(&#x27;r&#x27;,5).attr(&#x27;fill&#x27;,colors[i%colors.length]); svg.append(&#x27;path&#x27;).attr(&#x27;d&#x27;,d3.symbol().type(d3.symbolDiamond).size(90)()).attr(&#x27;transform&#x27;,`translate(${cx},${y(d.p95)})`).attr(&#x27;fill&#x27;,colors[i%colors.length]); svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,cx).attr(&#x27;y&#x27;,y(d.p95)-10).attr(&#x27;text-anchor&#x27;,&#x27;middle&#x27;).text(`${fmt2(d.p50)} / ${fmt2(d.p95)}`);});
+    svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,width/2).attr(&#x27;y&#x27;,height-8).attr(&#x27;text-anchor&#x27;,&#x27;middle&#x27;).text(&#x27;圆点：P50，菱形：P95；标注为 P50 / P95&#x27;);
+  }
+
+  function drawFunnel(){
+    const {svg,width,height}=setup(&#x27;runtime-funnel-chart&#x27;,300,&#x27;full 与 upper 模式从候选、几何通过、置信度通过到最终输出的数量&#x27;);
+    const m={top:18,right:42,bottom:48,left:92}; const stages=data.funnel.stages;
+    const y=d3.scaleBand().domain(stages).range([m.top,height-m.bottom]).padding(0.24);
+    const x=d3.scaleLog().domain([0.7,5000]).range([m.left,width-m.right]);
+    frame(svg,m,width,height); svg.append(&#x27;g&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-axis&#x27;).attr(&#x27;transform&#x27;,`translate(0,${height-m.bottom})`).call(d3.axisBottom(x).tickValues([1,10,100,1000]).tickFormat(d3.format(&#x27;~s&#x27;))); svg.append(&#x27;g&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-axis&#x27;).attr(&#x27;transform&#x27;,`translate(${m.left},0)`).call(d3.axisLeft(y));
+    stages.forEach((stage,i)=&gt;{const vals=[{name:&#x27;full&#x27;,value:data.funnel.full[i],color:colors[0],offset:0.12},{name:&#x27;upper&#x27;,value:data.funnel.upper[i],color:colors[1],offset:0.58}]; vals.forEach(v=&gt;{const yy=y(stage)+y.bandwidth()*v.offset; const h=y.bandwidth()*0.3; const end=x(Math.max(0.7,v.value)); svg.append(&#x27;line&#x27;).attr(&#x27;x1&#x27;,m.left).attr(&#x27;x2&#x27;,end).attr(&#x27;y1&#x27;,yy+h/2).attr(&#x27;y2&#x27;,yy+h/2).attr(&#x27;stroke&#x27;,v.color).attr(&#x27;stroke-width&#x27;,h); svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,Math.min(width-m.right+4,end+5)).attr(&#x27;y&#x27;,yy+h/2+4).text(`${v.name} ${fmt0(v.value)}`);});});
+    svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,width/2).attr(&#x27;y&#x27;,height-6).attr(&#x27;text-anchor&#x27;,&#x27;middle&#x27;).text(&#x27;数量（对数刻度）&#x27;);
+  }
+
+  const confidenceVisible={full:true,upper:true};
+  function drawConfidence(){
+    const {svg,width,height}=setup(&#x27;runtime-confidence-chart&#x27;,260,&#x27;full 与 upper 候选的 xiaoiron_confidence 分布以及 0.3 阈值&#x27;);
+    const m={top:12,right:24,bottom:46,left:64}; const all=[...data.confidence.full,...data.confidence.upper];
+    const x=d3.scaleLinear().domain([0,0.56]).range([m.left,width-m.right]); const y=d3.scaleSqrt().domain([0,d3.max(all,d=&gt;d.count)]).nice().range([height-m.bottom,m.top]);
+    frame(svg,m,width,height); axes(svg,x,y,m,width,height,&#x27;xiaoiron_confidence&#x27;,&#x27;候选数（平方根刻度）&#x27;,6,5);
+    [[&#x27;full&#x27;,data.confidence.full,colors[0]],[&#x27;upper&#x27;,data.confidence.upper,colors[1]]].forEach(([name,series,color])=&gt;{if(!confidenceVisible[name])return; const line=d3.line().curve(d3.curveStepAfter).x(d=&gt;x(d.x)).y(d=&gt;y(d.count)); svg.append(&#x27;path&#x27;).datum(series).attr(&#x27;fill&#x27;,&#x27;none&#x27;).attr(&#x27;stroke&#x27;,color).attr(&#x27;stroke-width&#x27;,2).attr(&#x27;d&#x27;,line);});
+    svg.append(&#x27;line&#x27;).attr(&#x27;x1&#x27;,x(0.3)).attr(&#x27;x2&#x27;,x(0.3)).attr(&#x27;y1&#x27;,m.top).attr(&#x27;y2&#x27;,height-m.bottom).attr(&#x27;stroke&#x27;,colors[3]).attr(&#x27;stroke-width&#x27;,1.5).attr(&#x27;stroke-dasharray&#x27;,&#x27;5 4&#x27;);
+    svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,x(0.3)+5).attr(&#x27;y&#x27;,m.top+13).text(&#x27;阈值 0.30&#x27;);
+    svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,x(0.2204)-3).attr(&#x27;y&#x27;,m.top+31).attr(&#x27;text-anchor&#x27;,&#x27;end&#x27;).text(&#x27;upper 最大值 0.220&#x27;);
+  }
+
+  function drawSector(){
+    const {svg,width,height}=setup(&#x27;runtime-sector-chart&#x27;,280,&#x27;方向扇区 1、2、5、6 中 q 等于 0 的候选比例，扇区 5 最高&#x27;);
+    const m={top:18,right:24,bottom:48,left:64}; const x=d3.scaleBand().domain(data.sectors.map(d=&gt;d.sector)).range([m.left,width-m.right]).padding(0.38); const y=d3.scaleLinear().domain([0,50]).range([height-m.bottom,m.top]);
+    frame(svg,m,width,height); axes(svg,x,y,m,width,height,&#x27;方向扇区&#x27;,&#x27;q=0 的候选比例 (%)&#x27;,4,5);
+    data.sectors.forEach((d,i)=&gt;{svg.append(&#x27;rect&#x27;).attr(&#x27;x&#x27;,x(d.sector)).attr(&#x27;y&#x27;,y(d.zero_pct)).attr(&#x27;width&#x27;,x.bandwidth()).attr(&#x27;height&#x27;,y(0)-y(d.zero_pct)).attr(&#x27;fill&#x27;,i===2?colors[3]:colors[0]); svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,x(d.sector)+x.bandwidth()/2).attr(&#x27;y&#x27;,y(d.zero_pct)-7).attr(&#x27;text-anchor&#x27;,&#x27;middle&#x27;).text(`${fmt1(d.zero_pct)}%`);});
+    svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,width/2).attr(&#x27;y&#x27;,height-7).attr(&#x27;text-anchor&#x27;,&#x27;middle&#x27;).text(&#x27;R 取四扇区最小值，任一扇区缺失都会把整体证据压到 0&#x27;);
+  }
+
+  function drawThreshold(){
+    const {svg,width,height}=setup(&#x27;runtime-threshold-chart&#x27;,280,&#x27;不同置信度阈值下，几何通过候选中 full 与 upper 模式剩余数量&#x27;); const m={top:18,right:58,bottom:48,left:64};
+    const x=d3.scaleLinear().domain([0.1,0.3]).range([m.left,width-m.right]); const y=d3.scaleSqrt().domain([0,d3.max(data.thresholds,d=&gt;Math.max(d.full,d.upper))]).nice().range([height-m.bottom,m.top]);
+    frame(svg,m,width,height); axes(svg,x,y,m,width,height,&#x27;置信度阈值&#x27;,&#x27;通过数量（平方根刻度）&#x27;,5,5);
+    [[&#x27;full&#x27;,colors[0]],[&#x27;upper&#x27;,colors[1]]].forEach(([key,color])=&gt;{const line=d3.line().x(d=&gt;x(d.threshold)).y(d=&gt;y(d[key])); svg.append(&#x27;path&#x27;).datum(data.thresholds).attr(&#x27;fill&#x27;,&#x27;none&#x27;).attr(&#x27;stroke&#x27;,color).attr(&#x27;stroke-width&#x27;,2).attr(&#x27;d&#x27;,line); svg.selectAll(`.threshold-${key}`).data(data.thresholds).enter().append(&#x27;circle&#x27;).attr(&#x27;cx&#x27;,d=&gt;x(d.threshold)).attr(&#x27;cy&#x27;,d=&gt;y(d[key])).attr(&#x27;r&#x27;,4).attr(&#x27;fill&#x27;,color); const last=data.thresholds[data.thresholds.length-1]; svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,x(last.threshold)+6).attr(&#x27;y&#x27;,y(last[key])+4).text(`${key} ${last[key]}`);});
+  }
+
+  function drawCenters(){
+    const {svg,width,height}=setup(&#x27;runtime-center-chart&#x27;,410,&#x27;33 次最终输出在 128×128 像素平面中的位置，分成两个时间簇，并标出击球峰值圆&#x27;);
+    const m={top:16,right:24,bottom:50,left:64}; const plot=Math.min(width-m.left-m.right,height-m.top-m.bottom); const left=m.left+(width-m.left-m.right-plot)/2;
+    const x=d3.scaleLinear().domain([0,128]).range([left,left+plot]); const y=d3.scaleLinear().domain([0,128]).range([m.top,m.top+plot]);
+    const local={left,top:m.top,right:width-left-plot,bottom:height-m.top-plot}; frame(svg,local,width,height);
+    svg.append(&#x27;g&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-gridline&#x27;).attr(&#x27;transform&#x27;,`translate(${left},0)`).call(d3.axisLeft(y).tickValues([0,32,64,96,128]).tickSize(-plot).tickFormat(&#x27;&#x27;));
+    svg.append(&#x27;g&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-gridline&#x27;).attr(&#x27;transform&#x27;,`translate(0,${m.top+plot})`).call(d3.axisBottom(x).tickValues([0,32,64,96,128]).tickSize(-plot).tickFormat(&#x27;&#x27;));
+    svg.append(&#x27;g&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-axis&#x27;).attr(&#x27;transform&#x27;,`translate(0,${m.top+plot})`).call(d3.axisBottom(x).tickValues([0,32,64,96,128])); svg.append(&#x27;g&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-axis&#x27;).attr(&#x27;transform&#x27;,`translate(${left},0)`).call(d3.axisLeft(y).tickValues([0,32,64,96,128]));
+    svg.append(&#x27;text&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-axis-title&#x27;).attr(&#x27;data-axis&#x27;,&#x27;x&#x27;).attr(&#x27;x&#x27;,left+plot/2).attr(&#x27;y&#x27;,height-6).attr(&#x27;text-anchor&#x27;,&#x27;middle&#x27;).text(&#x27;x (pixel)&#x27;);
+    svg.append(&#x27;text&#x27;).attr(&#x27;class&#x27;,&#x27;runtime-axis-title&#x27;).attr(&#x27;data-axis&#x27;,&#x27;y&#x27;).attr(&#x27;transform&#x27;,&#x27;rotate(-90)&#x27;).attr(&#x27;x&#x27;,-(m.top+plot/2)).attr(&#x27;y&#x27;,left-44).attr(&#x27;text-anchor&#x27;,&#x27;middle&#x27;).text(&#x27;y (pixel)&#x27;);
+    data.clusters.forEach((d,i)=&gt;{svg.append(&#x27;circle&#x27;).attr(&#x27;cx&#x27;,x(d.cx)).attr(&#x27;cy&#x27;,y(d.cy)).attr(&#x27;r&#x27;,plot*d.radius/128).attr(&#x27;fill&#x27;,&#x27;none&#x27;).attr(&#x27;stroke&#x27;,colors[i]).attr(&#x27;stroke-width&#x27;,2).attr(&#x27;stroke-dasharray&#x27;,&#x27;6 4&#x27;); svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,x(d.cx)+8).attr(&#x27;y&#x27;,y(d.cy)-8).text(`簇 ${d.cluster}：${d.count} 次`);});
+    data.accepted.forEach(d=&gt;{svg.append(&#x27;circle&#x27;).attr(&#x27;cx&#x27;,x(d.cx)).attr(&#x27;cy&#x27;,y(d.cy)).attr(&#x27;r&#x27;,4).attr(&#x27;fill&#x27;,colors[(d.cluster-1)%2]).attr(&#x27;opacity&#x27;,0.82); svg.append(&#x27;circle&#x27;).attr(&#x27;data-chart-hit&#x27;,&#x27;true&#x27;).attr(&#x27;cx&#x27;,x(d.cx)).attr(&#x27;cy&#x27;,y(d.cy)).attr(&#x27;r&#x27;,16).attr(&#x27;fill&#x27;,&#x27;transparent&#x27;).on(&#x27;pointermove&#x27;,event=&gt;showTip(event,`簇 ${d.cluster}&lt;br&gt;圆心 (${fmt2(d.cx)}, ${fmt2(d.cy)})&lt;br&gt;半径 ${fmt2(d.radius)} px&lt;br&gt;置信度 ${d.xiaoiron_confidence.toFixed(3)}`)).on(&#x27;pointerleave&#x27;,hideTip);});
+    const star=d3.symbol().type(d3.symbolStar).size(180); svg.append(&#x27;path&#x27;).attr(&#x27;d&#x27;,star()).attr(&#x27;transform&#x27;,`translate(${x(data.hit.cx)},${y(data.hit.cy)})`).attr(&#x27;fill&#x27;,colors[4]);
+    svg.append(&#x27;text&#x27;).attr(&#x27;x&#x27;,x(data.hit.cx)+10).attr(&#x27;y&#x27;,y(data.hit.cy)+18).text(`击球峰值 r=${fmt1(data.hit.radius)} px`);
+  }
+
+  const draws=[drawRate,drawLag,drawTime,drawLatency,drawFunnel,drawConfidence,drawSector,drawThreshold,drawCenters];
+  let queued=false; function redraw(){if(queued)return; queued=true; requestAnimationFrame(()=&gt;{queued=false; draws.forEach(fn=&gt;fn());});}
+  root.querySelectorAll(&#x27;[data-series]&#x27;).forEach(button=&gt;button.addEventListener(&#x27;click&#x27;,()=&gt;{const key=button.dataset.series; confidenceVisible[key]=!confidenceVisible[key]; button.setAttribute(&#x27;aria-pressed&#x27;,String(confidenceVisible[key])); drawConfidence();}));
+  new ResizeObserver(redraw).observe(root); redraw();
+})();
+&lt;/script&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+  let lastPointerWasTouch = false;
+  let pinnedByTouch = false;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    pinnedByTouch = false;
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handlePointer = (event) =&gt; {
+    lastPointerWasTouch =
+      event.type === &quot;pointerdown&quot; &amp;&amp; event.pointerType === &quot;touch&quot;;
+  };
+  const handleTouchClick = (event) =&gt; {
+    const isTouch = event.pointerType === &quot;touch&quot; || lastPointerWasTouch;
+    lastPointerWasTouch = false;
+    if (!isTouch || event.detail === 0) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (
+      trigger == null ||
+      !trigger.isConnected ||
+      getContent(trigger).length === 0 ||
+      (pinnedByTouch &amp;&amp; activeTrigger === trigger)
+    ) {
+      if (pinnedByTouch) {
+        closeTooltip();
+      }
+      return;
+    }
+    openTooltip(trigger);
+    pinnedByTouch = activeTrigger === trigger;
+    window.setTimeout(() =&gt; {
+      if (activeTrigger === trigger &amp;&amp; !trigger.isConnected) {
+        closeTooltip(false);
+      }
+    }, 0);
+  };
+  const handleLeave = (event) =&gt; {
+    if (pinnedByTouch) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    lastPointerWasTouch = false;
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    lastPointerWasTouch = false;
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerdown&quot;, handlePointer);
+    document.removeEventListener(&quot;pointercancel&quot;, handlePointer);
+    document.removeEventListener(&quot;click&quot;, handleTouchClick);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerdown&quot;, handlePointer);
+  document.addEventListener(&quot;pointercancel&quot;, handlePointer);
+  document.addEventListener(&quot;click&quot;, handleTouchClick);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-tabs&quot;&gt;
+(() =&gt; {
+  const selector = &#x27;.nav[role=&quot;tablist&quot;] [role=&quot;tab&quot;]&#x27;;
+  const disabled = &#x27;:disabled,[aria-disabled=&quot;true&quot;]&#x27;;
+  const selectTab = (selected) =&gt; {
+    const panelId = selected.getAttribute(&quot;aria-controls&quot;);
+    for (const tab of selected.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;)) {
+      const active = tab === selected;
+      tab.classList.toggle(&quot;active&quot;, active);
+      tab.setAttribute(&quot;aria-selected&quot;, String(active));
+      const id = tab.getAttribute(&quot;aria-controls&quot;);
+      const panel = id &amp;&amp; document.getElementById(id);
+      if (panel != null) {
+        panel.hidden = id !== panelId;
+        if (!panel.hidden &amp;&amp; selected.id) {
+          panel.setAttribute(&quot;aria-labelledby&quot;, selected.id);
+        }
+      }
+    }
+  };
+  const interact = (event) =&gt; {
+    const tab = event.target?.closest?.(selector);
+    if (event.defaultPrevented || tab == null || tab.matches(disabled)) {
+      return;
+    }
+    if (event.type === &quot;click&quot;) {
+      selectTab(tab);
+      return;
+    }
+    const tabs = Array.from(
+      tab.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;),
+    ).filter((candidate) =&gt; !candidate.matches(disabled));
+    const current = tabs.indexOf(tab);
+    let next;
+    if (event.key === &quot;ArrowRight&quot; || event.key === &quot;ArrowDown&quot;) {
+      next = (current + 1) % tabs.length;
+    } else if (event.key === &quot;ArrowLeft&quot; || event.key === &quot;ArrowUp&quot;) {
+      next = (current + tabs.length - 1) % tabs.length;
+    } else if (event.key === &quot;Home&quot;) {
+      next = 0;
+    } else if (event.key === &quot;End&quot;) {
+      next = tabs.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    tabs[next].focus();
+    selectTab(tabs[next]);
+  };
+
+  for (const list of document.querySelectorAll(&#x27;.nav[role=&quot;tablist&quot;]&#x27;)) {
+    const selected =
+      list.querySelector(&#x27;[role=&quot;tab&quot;][aria-selected=&quot;true&quot;]&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;].active&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;]&#x27;);
+    if (selected != null) {
+      selectTab(selected);
+    }
+  }
+  document.addEventListener(&quot;click&quot;, interact);
+  document.addEventListener(&quot;keydown&quot;, interact);
+  window.addEventListener(&quot;pagehide&quot;, () =&gt; {
+    document.removeEventListener(&quot;click&quot;, interact);
+    document.removeEventListener(&quot;keydown&quot;, interact);
+  }, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>

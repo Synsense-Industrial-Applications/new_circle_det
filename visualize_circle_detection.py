@@ -11,7 +11,7 @@ bursts and quiet intervals retain their original timing.
 Two detectors are displayed:
 
 * strict DSCT: the original direction-normal formulation;
-* adaptive DSCT: upper-arc-aware consensus with confirmed temporal tracking.
+* adaptive DSCT: radius-free circle consensus with confirmed temporal tracking.
 
 The adaptive detector is necessary because this recording's SNN direction
 codes have near-random agreement with the radial normals of visible circles.
@@ -92,9 +92,7 @@ PLAYBACK_SPEED_PRESETS = (
     10.0,
     20.0,
 )
-CACHE_FORMAT_VERSION = 5
-SUPPORT_MODE_CODES = {"unknown": 0, "full": 1, "upper": 2}
-SUPPORT_MODE_NAMES = {value: key for key, value in SUPPORT_MODE_CODES.items()}
+CACHE_FORMAT_VERSION = 6
 
 
 @dataclass(frozen=True)
@@ -107,8 +105,6 @@ class PlaybackCircle:
     event_count: int
     radial_mad: float
     direction_agreement: float
-    upper_angular_sectors: int
-    support_mode: str
     timestamp: float
 
 
@@ -122,8 +118,6 @@ class CircleSeries:
     event_count: np.ndarray
     radial_mad: np.ndarray
     direction_agreement: np.ndarray
-    upper_angular_sectors: np.ndarray
-    support_mode: np.ndarray
     full_confidence: np.ndarray
     xiaoiron_confidence: np.ndarray
     occlusion_factor: np.ndarray
@@ -155,10 +149,6 @@ class CircleSeries:
             event_count=int(self.event_count[index]),
             radial_mad=float(self.radial_mad[index]),
             direction_agreement=float(self.direction_agreement[index]),
-            upper_angular_sectors=int(self.upper_angular_sectors[index]),
-            support_mode=SUPPORT_MODE_NAMES.get(
-                int(self.support_mode[index]), "unknown"
-            ),
             timestamp=float(timestamp),
         )
 
@@ -226,8 +216,6 @@ def _empty_circle_series(event_count: int) -> CircleSeries:
         event_count=zeros(),
         radial_mad=nan(),
         direction_agreement=nan(),
-        upper_angular_sectors=zeros(),
-        support_mode=np.zeros(event_count, dtype=np.int8),
         full_confidence=nan(),
         xiaoiron_confidence=nan(),
         occlusion_factor=nan(),
@@ -258,12 +246,6 @@ def _record_detection(
     series.radial_mad[index] = detection.radial_mad
     series.direction_agreement[index] = getattr(
         detection, "direction_agreement", np.nan
-    )
-    series.upper_angular_sectors[index] = getattr(
-        detection, "upper_angular_sectors", 0
-    )
-    series.support_mode[index] = SUPPORT_MODE_CODES.get(
-        getattr(detection, "support_mode", "unknown"), 0
     )
     diagnostic = getattr(detection, "xiaoiron", None)
     if diagnostic is not None:
@@ -1033,9 +1015,6 @@ class DSCTEventPlayer:
             [], [], color="#00A6A6", linewidth=1.4, marker=".", markersize=2.5,
             label="full base"
         )
-        (self.upper_conf_line,) = self.ax_confidence.plot(
-            [], [], color="#E39126", linewidth=1, label="upper accepted"
-        )
         (self.xiaoiron_conf_line,) = self.ax_confidence.plot(
             [], [], color="#7B2CBF", linewidth=1.7, label="xiaoiron"
         )
@@ -1768,12 +1747,10 @@ class DSCTEventPlayer:
     ) -> str:
         if detection is None:
             return f"{prefix:<10} none"
-        support_mode = getattr(detection, "support_mode", "unknown")
-        mode_suffix = f" [{support_mode}]" if support_mode != "unknown" else ""
         return (
             f"{prefix:<10} ({detection.cx:5.1f},{detection.cy:5.1f}) "
             f"r={detection.radius:5.1f} conf={detection.confidence:.3f} "
-            f"in={detection.inlier_count}/{detection.event_count}{mode_suffix}"
+            f"in={detection.inlier_count}/{detection.event_count}"
         )
 
     @staticmethod
@@ -1885,10 +1862,6 @@ class DSCTEventPlayer:
         self.strict_conf_line.set_data(indices, self.strict_confidence[left : self.index + 1])
         self.adaptive_conf_line.set_data(
             indices, self.precomputed.adaptive.full_confidence[left : self.index + 1]
-        )
-        mode = self.precomputed.adaptive.support_mode[left : self.index + 1]
-        self.upper_conf_line.set_data(
-            indices, np.where(mode == 2, self.adaptive_confidence[left:self.index+1], np.nan)
         )
         self.xiaoiron_conf_line.set_data(
             indices, self.precomputed.adaptive.xiaoiron_confidence[left:self.index+1]

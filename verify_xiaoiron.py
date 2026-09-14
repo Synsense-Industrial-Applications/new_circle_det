@@ -65,7 +65,7 @@ def main():
         with np.load(old_path) as old:
             original_equal = all(np.allclose(
                 getattr(series, key), old["adaptive_"+key], equal_nan=True)
-                for key in ("cx", "cy", "radius", "confidence", "support_mode"))
+                for key in ("cx", "cy", "radius", "confidence"))
     gain_idx = int(np.nanargmax(new-full))
     loss_idx = int(np.nanargmin(new-full))
     report = dict(

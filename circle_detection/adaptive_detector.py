@@ -7,8 +7,7 @@ on those recordings the direction code is not a valid centre-line constraint.
 This module keeps DSCT's streaming interface, but obtains radius-free circle
 hypotheses from random triples of recent event positions. Three non-collinear
 points define one circle, so there is still no radius sweep or 3-D Hough
-accumulator. A dedicated upper-semicircle validator handles cue-mounted camera
-occlusion. A confirmed temporal track rejects isolated centre/radius jumps.
+accumulator. A confirmed temporal track rejects isolated centre/radius jumps.
 """
 
 from __future__ import annotations
@@ -48,17 +47,8 @@ class AdaptiveDetectorConfig:
     min_angular_sector_weight: float = 1.0
     min_angular_sectors: int = 7
     min_quadrants: int = 3
-    allow_upper_arc: bool = True
-    upper_min_inliers: int = 28
-    upper_min_inlier_weight_ratio: float = 0.18
-    upper_min_angular_sectors: int = 5
-    upper_min_span_deg: float = 125.0
-    upper_endpoint_radius_ratio: float = 0.32
-    upper_apex_radius_ratio: float = 0.58
-    upper_confidence_scale: float = 1.12
     min_direction_agreement: float = 0.05
     min_confidence: float = 0.18
-    upper_min_confidence: float = 0.14
     continuation_inlier_scale: float = 0.80
     continuation_ratio_scale: float = 0.85
     continuation_sector_relaxation: int = 1
@@ -89,8 +79,6 @@ class AdaptiveCircleDetection:
     radial_mad: float
     angular_sectors: int
     quadrants: int
-    upper_angular_sectors: int
-    support_mode: str
     direction_agreement: float
     hypotheses_tested: int
     timestamp: float
@@ -117,8 +105,6 @@ class _ScoredCircle:
     radial_mad: float
     angular_sectors: int
     quadrants: int
-    upper_angular_sectors: int
-    support_mode: str
     direction_agreement: float
 
 
@@ -427,10 +413,7 @@ class AdaptiveCircleDetector:
             config.continuation_confidence_scale if continuation else 1.0
         )
         full_min_inliers = max(3, math.ceil(config.min_inliers * inlier_scale))
-        upper_min_inliers = max(
-            3, math.ceil(config.upper_min_inliers * inlier_scale)
-        )
-        if inlier_count < min(full_min_inliers, upper_min_inliers):
+        if inlier_count < full_min_inliers:
             return None
         total_weight = float(np.sum(weights))
         inlier_weight = float(np.sum(weights[mask]))
@@ -471,61 +454,7 @@ class AdaptiveCircleDetector:
             and quadrant_count >= config.min_quadrants
         )
 
-        # A cue-mounted camera hides the lower half of a ball. Validate an
-        # upper arc by requiring left shoulder, apex and right shoulder support;
-        # this is much safer than merely lowering the total sector count.
-        # Do not admit points just below the candidate centre here. Their
-        # positive angles wrap near +pi and, if clipped, can fabricate a
-        # 180-degree upper-arc span from an image-border L shape.
-        upper_mask = inlier_dy <= 0.0
-        upper_angles = np.clip(angle[upper_mask], -math.pi, 0.0)
-        if len(upper_angles):
-            upper_sector_ids = np.clip(
-                (
-                    (upper_angles + math.pi)
-                    / math.pi
-                    * max(1, config.angular_sector_count // 2)
-                ).astype(int),
-                0,
-                max(0, config.angular_sector_count // 2 - 1),
-            )
-            upper_sector_weights = np.bincount(
-                upper_sector_ids,
-                weights=weights[mask][upper_mask],
-                minlength=max(1, config.angular_sector_count // 2),
-            )
-            upper_sector_count = int(
-                np.count_nonzero(
-                    upper_sector_weights >= config.min_angular_sector_weight
-                )
-            )
-            upper_span_deg = math.degrees(
-                float(np.max(upper_angles) - np.min(upper_angles))
-            )
-        else:
-            upper_sector_count = 0
-            upper_span_deg = 0.0
-        has_left_shoulder = bool(
-            np.any(inlier_dx[upper_mask] <= -config.upper_endpoint_radius_ratio * radius)
-        )
-        has_right_shoulder = bool(
-            np.any(inlier_dx[upper_mask] >= config.upper_endpoint_radius_ratio * radius)
-        )
-        has_apex = bool(
-            np.any(inlier_dy[upper_mask] <= -config.upper_apex_radius_ratio * radius)
-        )
-        upper_support = (
-            config.allow_upper_arc
-            and inlier_count >= upper_min_inliers
-            and ratio >= config.upper_min_inlier_weight_ratio * ratio_scale
-            and upper_sector_count
-            >= max(3, config.upper_min_angular_sectors - sector_relaxation)
-            and upper_span_deg >= config.upper_min_span_deg
-            and has_left_shoulder
-            and has_right_shoulder
-            and has_apex
-        )
-        if not full_support and not upper_support:
+        if not full_support:
             return None
 
         radial_mad = float(np.median(deviation[mask]))
@@ -540,40 +469,21 @@ class AdaptiveCircleDetector:
         # Direction contributes only a small, centred term.  A random 4-way
         # flow field therefore neither validates nor destroys a geometric fit.
         direction_factor = 0.95 + 0.10 * max(0.0, min(1.0, direction_agreement))
-        if full_support:
-            support_mode = "full"
-            coverage = min(
-                1.0,
-                sector_count / max(1.0, config.angular_sector_count / 2.0),
-            )
-            quadrant_coverage = min(
-                1.0, quadrant_count / max(1.0, config.min_quadrants)
-            )
-            confidence = (
-                ratio
-                * coverage
-                * quadrant_coverage
-                * compactness
-                * direction_factor
-            )
-            minimum_confidence = config.min_confidence * confidence_scale
-        else:
-            support_mode = "upper"
-            span_fraction = np.clip(
-                (upper_span_deg - config.upper_min_span_deg)
-                / max(1.0, 180.0 - config.upper_min_span_deg),
-                0.0,
-                1.0,
-            )
-            coverage = 0.78 + 0.22 * float(span_fraction)
-            confidence = (
-                ratio
-                * coverage
-                * compactness
-                * direction_factor
-                * config.upper_confidence_scale
-            )
-            minimum_confidence = config.upper_min_confidence * confidence_scale
+        coverage = min(
+            1.0,
+            sector_count / max(1.0, config.angular_sector_count / 2.0),
+        )
+        quadrant_coverage = min(
+            1.0, quadrant_count / max(1.0, config.min_quadrants)
+        )
+        confidence = (
+            ratio
+            * coverage
+            * quadrant_coverage
+            * compactness
+            * direction_factor
+        )
+        minimum_confidence = config.min_confidence * confidence_scale
         if confidence < minimum_confidence:
             return None
         return _ScoredCircle(
@@ -586,8 +496,6 @@ class AdaptiveCircleDetector:
             radial_mad=radial_mad,
             angular_sectors=sector_count,
             quadrants=quadrant_count,
-            upper_angular_sectors=upper_sector_count,
-            support_mode=support_mode,
             direction_agreement=direction_agreement,
         )
 
@@ -645,8 +553,6 @@ class AdaptiveCircleDetector:
             radial_mad=scored.radial_mad,
             angular_sectors=scored.angular_sectors,
             quadrants=scored.quadrants,
-            upper_angular_sectors=scored.upper_angular_sectors,
-            support_mode=scored.support_mode,
             direction_agreement=scored.direction_agreement,
             hypotheses_tested=hypotheses_tested,
             timestamp=timestamp,
@@ -865,8 +771,6 @@ class AdaptiveCircleDetector:
         if self._last_detection is not None:
             detection = self._last_detection
             config = self.config
-            # Apply the FULL expression even when the tracked geometry was
-            # admitted through upper support. Do not inherit the upper bonus.
             full = (
                 detection.radial_inlier_ratio
                 * min(1.0, detection.angular_sectors / max(1, config.angular_sector_count/2))

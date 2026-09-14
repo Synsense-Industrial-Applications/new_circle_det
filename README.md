@@ -130,7 +130,7 @@ python -m pip install -r requirements.txt
 ## 文件说明
 
 - `four_region_flow.py`：与参考播放器一致的64×64×8到128×128四区域解码。
-- `circle_detection/adaptive_detector.py`：固定事件数、三点圆假设、上半圆支持和连续跟踪检测器。
+- `circle_detection/adaptive_detector.py`：固定事件数、三点圆假设和连续跟踪检测器。
 - `circle_detection/xiaoiron_confidence.py`：独立新置信度函数与所有可调参数。
 - `XIAOIRON_CONFIDENCE.md`：新公式、扇区规则、调参方法和验证说明。
 - `circle_detection_step_by_step.ipynb`：逐事件主循环、输入输出调试、弹窗播放器、任意事件扇区检查。
@@ -140,10 +140,6 @@ python -m pip install -r requirements.txt
 
 Adaptive检测器默认每6个事件更新一次几何候选，但所有源事件都会按原始顺序进入检测器。
 `feature`方向只作为弱验证信号，圆的位置和半径主要由事件几何一致性决定。
-
-针对球杆遮住画面下半部分的情况，检测器另有 `upper` 支持模式：它要求上弧同时覆盖
-左肩、顶部和右肩，至少跨过125度及5个上半圆角度扇区，而不是简单降低全圆阈值。
-播放器信息栏会将这种结果标成 `[upper]`，完整圆标成 `[full]`。
 
 每个角度扇区还必须累积足够的时间衰减事件权重，单个偶然事件不能算作有效覆盖。这会
 排除由画面上边沿和左边沿组成的 L 形结构被拟合成超大圆的常见误识别。
@@ -164,7 +160,7 @@ Adaptive检测器默认每6个事件更新一次几何候选，但所有源事�
 ## 小铁新置信度（2026-09-08）
 
 `xiaoiron_confidence = clip(full_confidence × 遮挡奖励 × 方向一致性系数, 0, 1)`。
-它基于 full 几何公式，不继承 upper 的额外加成；但可以为通过 upper 分支的圆计算。
+它以完整圆几何置信度为基础。
 默认遮挡奖励最高乘1.51；空缺奖励检查10/11/12/13，方向项使用
 `R=min(q1*p1,q2*p2,q5*p5,q6*p6)`，按
 `exp(-0.85*(1-R))` 扣分，因此事件不足和方向混杂都会降低置信度。默认
@@ -174,7 +170,7 @@ Adaptive检测器默认每6个事件更新一次几何候选，但所有源事�
 窗口右侧固定显示完整公式、当前事件的数值代入过程，以及 `alpha`、`lambda`、`N_min`、
 `W_min`、`K_min`、`sector W` 六个实时参数滑块。拖动后会立即更新当前圆、显示过滤和整条
 `xiaoiron` 历史曲线；`Reset formula params` 可恢复启动播放器时的参数。
-下方历史同时显示 `full base`、`upper accepted`（仅upper分支有效时）和紫色 `xiaoiron`。
+下方历史同时显示 `full base` 和紫色 `xiaoiron`。
 评分窗口是最近300个事件，默认每6个事件重算；显示拖尾则按时间戳，二者不是同一个窗口。
 
 实时滑块只重算缓存的评分证据，不重跑圆几何生成和跟踪；15.5万个事件的整条评分曲线约30毫秒
@@ -184,8 +180,8 @@ Adaptive检测器默认每6个事件更新一次几何候选，但所有源事�
 Jupyter请重启内核并从头运行：参数cell中的 `XIAOIRON_CONFIG` 会作为播放器滑块的初始值，
 事件循环后单独执行播放器cell。
 最后的检查cell可设 `INSPECT_EVENT`（从1开始）输出扇区计数、四方向权重、纯度和是否完整位于画面内。
-旧内存结果的方向证据只有2个扇区，不能只运行最后的播放器cell。脚本会重新生成v5缓存。
+旧内存结果的方向证据只有2个扇区，不能只运行最后的播放器cell。脚本会重新生成v6缓存。
 
-此次只增加评分与显示过滤，不修改原候选生成、full/upper接受门限和跟踪。原检测器已经拒绝的
+评分与显示过滤不修改完整圆候选生成、接受门限和跟踪。原检测器已经拒绝的
 候选不会因新分数而复活；原 `confidence` 字段保留，新增 `detection.xiaoiron_confidence`
 和 `detection.xiaoiron` 诊断对象供代码调用。
