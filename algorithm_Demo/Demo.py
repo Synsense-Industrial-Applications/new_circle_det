@@ -546,6 +546,7 @@ def configure_cnn_pipeline():
         threshold_high=4, threshold_low=-1,
         weights=weights,
         monitor_enable=True,
+        leak_enable=True, bias=-2,
     )
 
     config.dvs_layer.monitor_enable = False
