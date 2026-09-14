@@ -33,7 +33,13 @@ else:
 
 # Import only the hardware/network objects from the user's current Demo.py.
 # Importing the module defines the network; it does not call Demo.main().
-from Demo import config, configure_cnn_pipeline, layer_4, open_speck2f_dev_kit
+from Demo import (
+    config,
+    configure_cnn_pipeline,
+    layer_4,
+    open_speck2f_dev_kit,
+    visualize_layer,
+)
 
 
 # ===========================================================================
@@ -228,6 +234,9 @@ def record_layer4():
     stopwatch.reset()
     stopwatch.start()
 
+    print("Opening samnagui Layer-4 activity view...")
+    viz_graph, viz_gui = visualize_layer(dev_kit, layer_4)
+
     # Discard configuration/start-up events before beginning the data file.
     event_buffer.get_events()
 
@@ -315,6 +324,15 @@ def record_layer4():
         session.stop()
         try:
             input_graph.stop()
+        except Exception:
+            pass
+        try:
+            viz_graph.stop()
+        except Exception:
+            pass
+        try:
+            viz_gui.terminate()
+            viz_gui.join(timeout=2)
         except Exception:
             pass
         # Keep the route reference alive until graph shutdown.
