@@ -9,11 +9,15 @@ performed.
 Run:
     python Demo_record.py
 
-Press Ctrl+C to stop.  The output path is printed when recording starts.
+Controls:
+    R: start/stop recording.  Each new start creates a new CSV file.
+    Q: quit the program.
+    Ctrl+C: quit the program safely.
 """
 
 import csv
 from datetime import datetime
+import msvcrt
 from pathlib import Path
 import time
 
@@ -35,6 +39,8 @@ FLUSH_EVERY_EVENTS = 4096
 FLUSH_INTERVAL_SEC = 1.0
 STATUS_INTERVAL_SEC = 1.0
 CSV_COLUMNS = ("x", "y", "feature", "timestamp")
+START_STOP_KEY = "r"
+QUIT_KEY = "q"
 
 
 def _new_output_path() -> Path:
@@ -49,8 +55,105 @@ def _event_row(event):
     return tuple(int(getattr(event, name)) for name in CSV_COLUMNS)
 
 
-def record_layer4() -> Path:
-    """Configure the board and stream Layer-4 output events to one CSV file."""
+def _read_pressed_keys():
+    """Read currently pending console keys without blocking event capture."""
+
+    keys = []
+    while msvcrt.kbhit():
+        key = msvcrt.getwch()
+        if key in ("\x00", "\xe0"):
+            # Consume the second byte of a Windows extended key.
+            if msvcrt.kbhit():
+                msvcrt.getwch()
+            continue
+        keys.append(key.lower())
+    return keys
+
+
+class CsvRecordingSession:
+    """Own one CSV file and its per-recording counters."""
+
+    def __init__(self):
+        self.csv_file = None
+        self.writer = None
+        self.output_path = None
+        self.started = 0.0
+        self.last_flush = 0.0
+        self.events_since_flush = 0
+        self.event_count = 0
+        self.invalid_count = 0
+        self.saved_paths = []
+
+    @property
+    def active(self):
+        return self.csv_file is not None
+
+    def start(self):
+        if self.active:
+            return
+        self.output_path = _new_output_path()
+        self.csv_file = self.output_path.open(
+            "w", newline="", encoding="utf-8", buffering=1024 * 1024
+        )
+        self.writer = csv.writer(self.csv_file)
+        self.writer.writerow(CSV_COLUMNS)
+        self.csv_file.flush()
+        self.started = time.monotonic()
+        self.last_flush = self.started
+        self.events_since_flush = 0
+        self.event_count = 0
+        self.invalid_count = 0
+        print("\n[RECORDING STARTED]")
+        print(self.output_path.resolve())
+
+    def write(self, rows, invalid_count=0):
+        if not self.active:
+            return
+        self.invalid_count += invalid_count
+        if not rows:
+            return
+        self.writer.writerows(rows)
+        written = len(rows)
+        self.event_count += written
+        self.events_since_flush += written
+
+    def flush_if_due(self, now):
+        if not self.active:
+            return
+        if (
+            self.events_since_flush >= FLUSH_EVERY_EVENTS
+            or now - self.last_flush >= FLUSH_INTERVAL_SEC
+        ):
+            self.csv_file.flush()
+            self.events_since_flush = 0
+            self.last_flush = now
+
+    def stop(self):
+        if not self.active:
+            return None
+        elapsed = max(time.monotonic() - self.started, 1e-9)
+        output_path = self.output_path
+        try:
+            self.csv_file.flush()
+        finally:
+            self.csv_file.close()
+        self.saved_paths.append(output_path)
+        print("\n[RECORDING STOPPED]")
+        print(
+            f"Saved {self.event_count:,} Layer-4 events in {elapsed:.3f}s "
+            f"({self.event_count / elapsed:,.1f} event/s); "
+            f"invalid={self.invalid_count:,}"
+        )
+        print(f"CSV: {output_path.resolve()}")
+        print("Press R to create a new recording, or Q to quit.")
+        self.csv_file = None
+        self.writer = None
+        self.output_path = None
+        return output_path
+
+
+def record_layer4():
+    """Configure the board and record any number of Layer-4 CSV sessions."""
 
     print("Configuring the SNN/CNN pipeline from Demo.py...")
     configure_cnn_pipeline()
@@ -82,80 +185,85 @@ def record_layer4() -> Path:
     # Discard configuration/start-up events before beginning the data file.
     event_buffer.get_events()
 
-    output_path = _new_output_path()
     total_raw = 0
-    total_layer4 = 0
-    invalid_layer4 = 0
-    events_since_flush = 0
-    started = time.monotonic()
-    last_flush = started
-    last_status = started
-    previous_status_count = 0
+    total_layer4_seen = 0
+    last_status = time.monotonic()
+    previous_status_seen = 0
+    session = CsvRecordingSession()
 
     print(
-        f"Recording logical Layer 4 output (hardware layer={layer_4}) to:"
+        f"Logical Layer 4 is ready (hardware layer={layer_4})."
     )
-    print(output_path.resolve())
     print("CSV columns: x,y,feature,timestamp")
-    print("Press Ctrl+C to stop and close the file safely.")
+    print("Press R to start/stop recording; press Q to quit.")
 
     try:
-        with output_path.open(
-            "w", newline="", encoding="utf-8", buffering=1024 * 1024
-        ) as csv_file:
-            writer = csv.writer(csv_file)
-            writer.writerow(CSV_COLUMNS)
+        try:
+            running = True
+            while running:
+                for key in _read_pressed_keys():
+                    if key == START_STOP_KEY:
+                        if session.active:
+                            session.stop()
+                        else:
+                            # The event stream is drained continuously while idle,
+                            # so a new file starts at this key press boundary.
+                            session.start()
+                    elif key == QUIT_KEY:
+                        running = False
+                        break
 
-            try:
-                while True:
-                    events = event_buffer.get_n_events(
-                        n=READ_BATCH_SIZE,
-                        timeout=READ_TIMEOUT_MS,
-                    )
-                    total_raw += len(events)
+                if not running:
+                    break
 
-                    rows = []
-                    for event in events:
-                        if getattr(event, "layer", None) != layer_4:
-                            continue
-                        try:
-                            rows.append(_event_row(event))
-                        except (AttributeError, TypeError, ValueError):
-                            invalid_layer4 += 1
+                events = event_buffer.get_n_events(
+                    n=READ_BATCH_SIZE,
+                    timeout=READ_TIMEOUT_MS,
+                )
+                total_raw += len(events)
 
-                    if rows:
-                        writer.writerows(rows)
-                        written = len(rows)
-                        total_layer4 += written
-                        events_since_flush += written
+                rows = []
+                invalid_in_batch = 0
+                for event in events:
+                    if getattr(event, "layer", None) != layer_4:
+                        continue
+                    total_layer4_seen += 1
+                    if not session.active:
+                        continue
+                    try:
+                        rows.append(_event_row(event))
+                    except (AttributeError, TypeError, ValueError):
+                        invalid_in_batch += 1
 
-                    now = time.monotonic()
-                    if (
-                        events_since_flush >= FLUSH_EVERY_EVENTS
-                        or now - last_flush >= FLUSH_INTERVAL_SEC
-                    ):
-                        csv_file.flush()
-                        events_since_flush = 0
-                        last_flush = now
+                session.write(rows, invalid_in_batch)
 
-                    if now - last_status >= STATUS_INTERVAL_SEC:
-                        interval = now - last_status
-                        rate = (total_layer4 - previous_status_count) / interval
-                        print(
-                            f"layer4={total_layer4:,}  rate={rate:,.1f} event/s  "
-                            f"raw={total_raw:,}  invalid={invalid_layer4:,}",
-                            flush=True,
+                now = time.monotonic()
+                session.flush_if_due(now)
+                if now - last_status >= STATUS_INTERVAL_SEC:
+                    interval = now - last_status
+                    input_rate = (
+                        total_layer4_seen - previous_status_seen
+                    ) / interval
+                    if session.active:
+                        state = (
+                            f"RECORDING file_events={session.event_count:,} "
+                            f"invalid={session.invalid_count:,}"
                         )
-                        previous_status_count = total_layer4
-                        last_status = now
+                    else:
+                        state = "IDLE"
+                    print(
+                        f"[{state}] layer4_input={input_rate:,.1f} event/s  "
+                        f"seen={total_layer4_seen:,}  raw={total_raw:,}",
+                        flush=True,
+                    )
+                    previous_status_seen = total_layer4_seen
+                    last_status = now
 
-            except KeyboardInterrupt:
-                print("\nStop requested; flushing recorded events...", flush=True)
-
-            finally:
-                csv_file.flush()
+        except KeyboardInterrupt:
+            print("\nCtrl+C received; exiting safely...", flush=True)
 
     finally:
+        session.stop()
         try:
             input_graph.stop()
         except Exception:
@@ -163,13 +271,10 @@ def record_layer4() -> Path:
         # Keep the route reference alive until graph shutdown.
         _ = device_input_route
 
-    elapsed = max(time.monotonic() - started, 1e-9)
-    print(
-        f"Recording complete: {total_layer4:,} Layer-4 events in "
-        f"{elapsed:.3f}s ({total_layer4 / elapsed:,.1f} event/s)."
-    )
-    print(f"Saved CSV: {output_path.resolve()}")
-    return output_path
+    print(f"Recorder closed. CSV files created: {len(session.saved_paths)}")
+    for path in session.saved_paths:
+        print(path.resolve())
+    return tuple(session.saved_paths)
 
 
 def main():
