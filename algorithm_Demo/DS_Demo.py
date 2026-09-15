@@ -1,8 +1,9 @@
-"""Real-time separable D/S centre-vote demo for the current Layer-4 SNN.
+"""Real-time time-decayed D/S centre-vote demo for the current Layer-4 SNN.
 
 The hardware/network configuration is imported from ``Demo.py`` so there is
-only one SNN definition to maintain.  The last 200 decoded Layer-4 events form
-a sliding window.  A new D/S result is computed after every 6 new events.
+only one SNN definition to maintain.  Every decoded Layer-4 event updates one
+exponentially decayed D/S histogram bin.  A new peak result is published after
+every 6 events; there is no fixed-count detection window.
 
 Only the two one-dimensional histogram peaks are used here.  Radius fitting,
 circle coverage, tracking and the existing confidence pipeline are purposely
@@ -10,29 +11,32 @@ not part of this demo.
 
 Run:
     python DS_Demo.py
-    python DS_Demo.py --peak-threshold 0.15 --display-fps 30
+    python DS_Demo.py --peak-threshold 0.14 --decay-tau-ms 400 --evidence-w0 20
 
 Keys:
     [ / ]       decrease / increase the peak threshold by 0.02
     Q or Esc     close the demo
 
-The latest centre that passes the threshold is displayed immediately.  A new
-D/S update moves or hides the marker without retaining an older centre.  The
+The latest centre that passes the threshold is displayed immediately.  Even
+when no new event arrives, its confidence and event image continue to decay in
+wall-clock time, and the marker disappears after crossing the threshold.  The
 fixed cue-head reference defaults to (68, 83) and can be changed with
 ``--cue-x`` and ``--cue-y``.
 
-The UI uses Tk (Python standard library) and runs in the main thread.  Hardware
-reading and D/S calculation run in a worker thread.  A one-element queue keeps
-only the newest snapshot, so a burst of events cannot build a rendering backlog.
-The implementation contains no Windows-only input or display API and runs on
-Linux when Tk, NumPy, samna and the Speck2f runtime are installed.
+The UI uses Tk (Python standard library) and runs in the main thread.  A second
+samnagui process displays the raw Layer-4 activity through the existing samna
+route from ``Demo.py``.  Hardware reading and D/S calculation run in a worker
+thread.  A one-element queue keeps only the newest snapshot, so a burst of
+events cannot build a rendering backlog.  The implementation contains no
+Windows-only input or display API and runs on Linux when Tk, NumPy, samna and
+the Speck2f runtime are installed.
 """
 
 from __future__ import annotations
 
 import argparse
-from collections import deque
 from dataclasses import dataclass
+import math
 import queue
 import threading
 import time
@@ -44,10 +48,19 @@ import numpy as np
 
 
 IMAGE_SIZE = 128
-WINDOW_EVENTS = 200
 UPDATE_STEP_EVENTS = 6
+# This buffer is only for the Tk overlay.  At the recorded peak rate it covers
+# about 120 ms, longer than the default 80 ms display fade, while keeping the
+# six-event snapshot publication inexpensive.  samnagui receives every Layer-4
+# event independently of this presentation buffer.
+DISPLAY_EVENT_LIMIT = 512
 READ_BATCH_SIZE = 512
 READ_TIMEOUT_MS = 10
+DEFAULT_DECAY_TAU_MS = 400.0
+DEFAULT_EVIDENCE_W0 = 20.0
+DEFAULT_PEAK_THRESHOLD = 0.14
+LAZY_SCALE_RENORMALIZE = 1e-6
+TIMESTAMP_WRAP = 1 << 32
 
 D_FAMILY = frozenset((0, 3, 4, 7))
 S_FAMILY = frozenset((1, 2, 5, 6))
@@ -66,7 +79,6 @@ DIRECTION_RGB = np.asarray(
 SMOOTH_KERNEL = np.asarray((1, 2, 3, 4, 3, 2, 1), dtype=np.float32) / 16.0
 PEAK_SUPPORT_HALF_WIDTH = 3
 SECOND_PEAK_EXCLUSION = 8
-MIN_FAMILY_EVENTS = 8
 THRESHOLD_STEP = 0.02
 DEFAULT_CUE_HEAD_X = 68.0
 DEFAULT_CUE_HEAD_Y = 83.0
@@ -88,8 +100,11 @@ class DSResult:
     d_peak: PeakResult
     s_peak: PeakResult
     score: float
-    d_event_count: int
-    s_event_count: int
+    d_weight: float
+    s_weight: float
+    d_evidence: float
+    s_evidence: float
+    balance: float
     inside_view: bool
     enough_events: bool
 
@@ -106,6 +121,8 @@ class DSSnapshot:
     source_event_count: int
     update_count: int
     published_wall_time: float
+    decay_tau_us: float
+    evidence_w0: float
 
 
 class ThresholdState:
@@ -198,42 +215,170 @@ def _peak_from_histogram(histogram: np.ndarray, value_offset: int) -> PeakResult
     return PeakResult(primary_value, second_value, support, prominence, score)
 
 
-class DSWindow:
-    """A 200-event sliding window recalculated every 6 input events."""
+def _combine_confidence(
+    d_shape: float,
+    s_shape: float,
+    d_weight: float,
+    s_weight: float,
+    evidence_w0: float,
+):
+    """Return harmonic D/S confidence and its live evidence components.
 
-    def __init__(self):
-        self._events = deque(maxlen=WINDOW_EVENTS)
+    Shape terms are scale-invariant, so an absolute evidence term is required
+    for confidence to fall during a quiet period.  The harmonic mean penalises
+    a weak direction family smoothly; ``sqrt(balance)`` adds a smaller penalty
+    when almost all effective events belong to only one family.
+    """
+
+    d_weight = max(float(d_weight), 0.0)
+    s_weight = max(float(s_weight), 0.0)
+    d_evidence = 1.0 - math.exp(-d_weight / evidence_w0)
+    s_evidence = 1.0 - math.exp(-s_weight / evidence_w0)
+    d_family = float(d_shape) * float(d_evidence)
+    s_family = float(s_shape) * float(s_evidence)
+    balance = 2.0 * min(d_weight, s_weight) / max(d_weight + s_weight, 1e-12)
+    harmonic = 2.0 * d_family * s_family / max(d_family + s_family, 1e-12)
+    score = math.sqrt(balance) * harmonic
+    return (
+        float(np.clip(score, 0.0, 1.0)),
+        float(d_evidence),
+        float(s_evidence),
+        float(balance),
+    )
+
+
+def confidence_at_age(
+    result: DSResult,
+    age_us: float,
+    tau_us: float,
+    evidence_w0: float,
+):
+    """Evaluate current confidence without waiting for another input event."""
+
+    decay = math.exp(-max(float(age_us), 0.0) / max(float(tau_us), 1.0))
+    d_weight = result.d_weight * decay
+    s_weight = result.s_weight * decay
+    score, d_evidence, s_evidence, balance = _combine_confidence(
+        result.d_peak.score,
+        result.s_peak.score,
+        d_weight,
+        s_weight,
+        evidence_w0,
+    )
+    return score, d_weight, s_weight, d_evidence, s_evidence, balance
+
+
+class DSDecayAccumulator:
+    """Event-triggered exponentially decayed D/S accumulator.
+
+    ``_global_scale`` applies the same decay to every histogram bin.  New
+    events are inserted divided by that scale, so the per-event update touches
+    one scalar and one bin instead of multiplying two 255-bin arrays.  The
+    display history is a separate bounded buffer and is not used for detection.
+    """
+
+    def __init__(
+        self,
+        decay_tau_ms=DEFAULT_DECAY_TAU_MS,
+        evidence_w0=DEFAULT_EVIDENCE_W0,
+        update_step_events=UPDATE_STEP_EVENTS,
+    ):
+        self.decay_tau_us = max(float(decay_tau_ms) * 1000.0, 1.0)
+        self.evidence_w0 = max(float(evidence_w0), 1e-6)
+        self.update_step_events = max(int(update_step_events), 1)
+        self._d_histogram = np.zeros(255, dtype=np.float64)
+        self._s_histogram = np.zeros(255, dtype=np.float64)
+        self._global_scale = 1.0
+        self._last_raw_timestamp = None
+        self._logical_timestamp_us = 0
+        self._display_x = np.empty(DISPLAY_EVENT_LIMIT, dtype=np.int16)
+        self._display_y = np.empty(DISPLAY_EVENT_LIMIT, dtype=np.int16)
+        self._display_feature = np.empty(DISPLAY_EVENT_LIMIT, dtype=np.int8)
+        self._display_timestamp = np.empty(DISPLAY_EVENT_LIMIT, dtype=np.int64)
+        self._display_write = 0
+        self._display_count = 0
         self.source_event_count = 0
         self.update_count = 0
         self._events_since_update = 0
 
+    @staticmethod
+    def _timestamp_delta(previous: int | None, current: int) -> int:
+        if previous is None:
+            return 0
+        delta = int(current) - int(previous)
+        if delta >= 0:
+            return delta
+        # samna timestamps are commonly uint32 microseconds.  Treat a high-to-
+        # low transition as wraparound; otherwise tolerate a reordered event.
+        if int(previous) > TIMESTAMP_WRAP // 2 and int(current) < TIMESTAMP_WRAP // 2:
+            return TIMESTAMP_WRAP - int(previous) + int(current)
+        return 0
+
+    def _advance_time(self, raw_timestamp: int):
+        delta_us = self._timestamp_delta(self._last_raw_timestamp, raw_timestamp)
+        self._last_raw_timestamp = int(raw_timestamp)
+        self._logical_timestamp_us += delta_us
+        self._global_scale *= math.exp(-delta_us / self.decay_tau_us)
+        if self._global_scale < LAZY_SCALE_RENORMALIZE:
+            self._d_histogram *= self._global_scale
+            self._s_histogram *= self._global_scale
+            self._global_scale = 1.0
+
     def push_raw(self, x64, y64, feature, timestamp):
         x, y = decode_layer4_address(x64, y64, feature)
-        self._events.append((x, y, int(feature), int(timestamp)))
+        feature = int(feature)
+        self._advance_time(int(timestamp))
+        reciprocal_scale = 1.0 / self._global_scale
+        if feature in D_FAMILY:
+            self._d_histogram[y - x + 127] += reciprocal_scale
+        else:
+            self._s_histogram[x + y] += reciprocal_scale
+        display_index = self._display_write
+        self._display_x[display_index] = x
+        self._display_y[display_index] = y
+        self._display_feature[display_index] = feature
+        self._display_timestamp[display_index] = self._logical_timestamp_us
+        self._display_write = (display_index + 1) % DISPLAY_EVENT_LIMIT
+        self._display_count = min(self._display_count + 1, DISPLAY_EVENT_LIMIT)
         self.source_event_count += 1
         self._events_since_update += 1
-        if len(self._events) < WINDOW_EVENTS:
-            return None
-        if self.update_count and self._events_since_update < UPDATE_STEP_EVENTS:
+        if self._events_since_update < self.update_step_events:
             return None
         self._events_since_update = 0
         self.update_count += 1
         return self._calculate()
 
+    def _display_snapshot(self):
+        if self._display_count < DISPLAY_EVENT_LIMIT:
+            stop = self._display_count
+            return (
+                self._display_x[:stop].copy(),
+                self._display_y[:stop].copy(),
+                self._display_feature[:stop].copy(),
+                self._display_timestamp[:stop].copy(),
+            )
+        start = self._display_write
+        if start == 0:
+            return (
+                self._display_x.copy(),
+                self._display_y.copy(),
+                self._display_feature.copy(),
+                self._display_timestamp.copy(),
+            )
+        return tuple(
+            np.concatenate((values[start:], values[:start]))
+            for values in (
+                self._display_x,
+                self._display_y,
+                self._display_feature,
+                self._display_timestamp,
+            )
+        )
+
     def _calculate(self):
-        values = np.asarray(self._events, dtype=np.int64)
-        x = values[:, 0].astype(np.int16)
-        y = values[:, 1].astype(np.int16)
-        feature = values[:, 2].astype(np.int8)
-        timestamp = values[:, 3].astype(np.int64)
-
-        d_mask = np.isin(feature, tuple(D_FAMILY))
-        s_mask = ~d_mask
-        d_values = y[d_mask].astype(np.int16) - x[d_mask].astype(np.int16)
-        s_values = x[s_mask].astype(np.int16) + y[s_mask].astype(np.int16)
-        d_histogram = np.bincount(d_values + 127, minlength=255).astype(np.float32)
-        s_histogram = np.bincount(s_values, minlength=255).astype(np.float32)
-
+        # Scaling is materialised only when publishing a small 255-bin snapshot.
+        d_histogram = (self._d_histogram * self._global_scale).astype(np.float32)
+        s_histogram = (self._s_histogram * self._global_scale).astype(np.float32)
         d_peak = _peak_from_histogram(d_histogram, -127)
         s_peak = _peak_from_histogram(s_histogram, 0)
         if np.isfinite(d_peak.value + s_peak.value):
@@ -241,32 +386,47 @@ class DSWindow:
             cy = (s_peak.value + d_peak.value) / 2.0
         else:
             cx = cy = np.nan
-        d_count = int(d_mask.sum())
-        s_count = int(s_mask.sum())
+
+        d_weight = float(d_histogram.sum())
+        s_weight = float(s_histogram.sum())
+        score, d_evidence, s_evidence, balance = _combine_confidence(
+            d_peak.score,
+            s_peak.score,
+            d_weight,
+            s_weight,
+            self.evidence_w0,
+        )
         result = DSResult(
             cx=float(cx),
             cy=float(cy),
             d_peak=d_peak,
             s_peak=s_peak,
-            score=float(min(d_peak.score, s_peak.score)),
-            d_event_count=d_count,
-            s_event_count=s_count,
+            score=score,
+            d_weight=d_weight,
+            s_weight=s_weight,
+            d_evidence=d_evidence,
+            s_evidence=s_evidence,
+            balance=balance,
             inside_view=bool(0.0 <= cx < IMAGE_SIZE and 0.0 <= cy < IMAGE_SIZE),
-            enough_events=bool(
-                d_count >= MIN_FAMILY_EVENTS and s_count >= MIN_FAMILY_EVENTS
-            ),
+            enough_events=bool(d_weight > 1e-6 and s_weight > 1e-6),
+        )
+
+        display_x, display_y, display_feature, display_timestamp = (
+            self._display_snapshot()
         )
         return DSSnapshot(
-            x=x,
-            y=y,
-            feature=feature,
-            timestamp=timestamp,
+            x=display_x,
+            y=display_y,
+            feature=display_feature,
+            timestamp=display_timestamp,
             d_histogram=d_histogram,
             s_histogram=s_histogram,
             result=result,
             source_event_count=self.source_event_count,
             update_count=self.update_count,
             published_wall_time=time.monotonic(),
+            decay_tau_us=self.decay_tau_us,
+            evidence_w0=self.evidence_w0,
         )
 
 
@@ -291,15 +451,28 @@ def publish_latest(output_queue: queue.Queue, snapshot: DSSnapshot):
 class HardwareWorker(threading.Thread):
     """Own the board event loop; never waits for the GUI renderer."""
 
-    def __init__(self, output_queue, stop_event, runtime_status):
+    def __init__(
+        self,
+        output_queue,
+        stop_event,
+        runtime_status,
+        decay_tau_ms,
+        evidence_w0,
+        show_samna_layer4=True,
+    ):
         super().__init__(name="ds-hardware", daemon=True)
         self.output_queue = output_queue
         self.stop_event = stop_event
         self.runtime_status = runtime_status
+        self.decay_tau_ms = float(decay_tau_ms)
+        self.evidence_w0 = float(evidence_w0)
+        self.show_samna_layer4 = bool(show_samna_layer4)
 
     def run(self):
         input_graph = None
         device_input_route = None
+        viz_graph = None
+        viz_gui = None
         try:
             # Delay hardware imports so --help and offline algorithm tests work
             # on development machines without the Speck2f runtime installed.
@@ -309,6 +482,7 @@ class HardwareWorker(threading.Thread):
                 configure_cnn_pipeline,
                 layer_4,
                 open_speck2f_dev_kit,
+                visualize_layer,
             )
 
             self.runtime_status.update(state="configuring current SNN")
@@ -334,8 +508,15 @@ class HardwareWorker(threading.Thread):
             stopwatch.reset()
             stopwatch.start()
 
+            if self.show_samna_layer4:
+                self.runtime_status.update(state="opening samna Layer-4 viewer")
+                viz_graph, viz_gui = visualize_layer(dev_kit, layer_4)
+
             event_buffer.get_events()
-            detector = DSWindow()
+            detector = DSDecayAccumulator(
+                decay_tau_ms=self.decay_tau_ms,
+                evidence_w0=self.evidence_w0,
+            )
             self.runtime_status.update(state="running")
             rate_started = time.monotonic()
             previous_events = 0
@@ -383,6 +564,17 @@ class HardwareWorker(threading.Thread):
                     input_graph.stop()
                 except Exception:
                     pass
+            if viz_graph is not None:
+                try:
+                    viz_graph.stop()
+                except Exception:
+                    pass
+            if viz_gui is not None:
+                try:
+                    viz_gui.terminate()
+                    viz_gui.join(timeout=2.0)
+                except Exception:
+                    pass
             # Intentional lifetime anchor for the device route.
             _ = device_input_route
             if not self.runtime_status.read()[3]:
@@ -416,12 +608,14 @@ class DSViewer:
         self.fade_tau_us = max(float(fade_tau_ms) * 1000.0, 1.0)
         self.snapshot = None
         self.last_histogram_update = -1
+        self.last_histogram_draw_time = 0.0
+        self.histogram_refresh_sec = 0.10
         self.base_photo = tk.PhotoImage(width=IMAGE_SIZE, height=IMAGE_SIZE)
         self.scaled_photo = tk.PhotoImage(width=self.EVENT_SIDE, height=self.EVENT_SIDE)
         self.image_item = None
 
         self.threshold_text = tk.StringVar()
-        self.result_text = tk.StringVar(value="Waiting for 200 Layer-4 events...")
+        self.result_text = tk.StringVar(value="Waiting for 6 Layer-4 events...")
         self.runtime_text = tk.StringVar(value="Starting hardware...")
 
         root.title("Layer-4 D/S real-time centre demo")
@@ -513,6 +707,14 @@ class DSViewer:
         ttk.Label(right, textvariable=self.result_text, justify="left").grid(
             row=1, column=0, sticky="w", pady=(4, 8)
         )
+        ttk.Label(
+            right,
+            justify="left",
+            text=(
+                "C = sqrt(B) * 2*F_D*F_S/(F_D+F_S)\n"
+                "F_f = shape_f * (1-exp(-W_f/W0))"
+            ),
+        ).grid(row=2, column=0, sticky="w", pady=(0, 8))
         self.d_canvas = tk.Canvas(
             right,
             width=self.HISTOGRAM_WIDTH,
@@ -520,7 +722,7 @@ class DSViewer:
             background="#09101a",
             highlightthickness=0,
         )
-        self.d_canvas.grid(row=2, column=0, sticky="ew")
+        self.d_canvas.grid(row=3, column=0, sticky="ew")
         self.s_canvas = tk.Canvas(
             right,
             width=self.HISTOGRAM_WIDTH,
@@ -528,9 +730,9 @@ class DSViewer:
             background="#09101a",
             highlightthickness=0,
         )
-        self.s_canvas.grid(row=3, column=0, sticky="ew", pady=(8, 0))
+        self.s_canvas.grid(row=4, column=0, sticky="ew", pady=(8, 0))
         ttk.Label(right, textvariable=self.runtime_text, justify="left").grid(
-            row=4, column=0, sticky="w", pady=(8, 0)
+            row=5, column=0, sticky="w", pady=(8, 0)
         )
 
         self._update_threshold_text()
@@ -538,7 +740,7 @@ class DSViewer:
 
     def _update_threshold_text(self):
         self.threshold_text.set(
-            f"Peak threshold: {self.threshold_state.get():.2f}    "
+            f"Confidence threshold: {self.threshold_state.get():.2f}    "
             "[ decrease    ] increase    Q/Esc quit"
         )
 
@@ -600,29 +802,42 @@ class DSViewer:
         )
         self.event_canvas.itemconfigure(self.image_item, image=self.scaled_photo)
 
-    def _draw_histogram(self, canvas, histogram, value_offset, title, peak):
+    def _draw_histogram(
+        self, canvas, histogram, value_offset, title, peak, weight, evidence
+    ):
         canvas.delete("all")
         width = max(canvas.winfo_width(), self.HISTOGRAM_WIDTH)
         height = max(canvas.winfo_height(), self.HISTOGRAM_HEIGHT)
-        left, right, top, bottom = 46.0, width - 12.0, 24.0, height - 30.0
+        left, right, top, bottom = 46.0, width - 12.0, 42.0, height - 30.0
         canvas.create_line(left, bottom, right, bottom, fill="#718096")
         canvas.create_line(left, top, left, bottom, fill="#718096")
         smooth = np.convolve(histogram, SMOOTH_KERNEL, mode="same")
+        # A floor keeps absolute fading visible instead of renormalising a tiny
+        # stale histogram back to full height.
         maximum = max(float(smooth.max()), 1.0)
         points = []
         for index, value in enumerate(smooth):
             x = left + index / 254.0 * (right - left)
             y = bottom - float(value) / maximum * (bottom - top)
             points.extend((x, y))
-        canvas.create_line(*points, fill="#43b5e8", width=2)
-        peak_x = left + (peak.value - value_offset) / 254.0 * (right - left)
-        canvas.create_line(peak_x, top, peak_x, bottom, fill="#ffd60a", width=2)
+        brightness = int(np.clip(90 + 165 * evidence, 0, 255))
+        line_colour = (
+            f"#{int(0.27 * brightness):02x}"
+            f"{int(0.71 * brightness):02x}{brightness:02x}"
+        )
+        canvas.create_line(*points, fill=line_colour, width=2)
+        if np.isfinite(peak.value):
+            peak_x = left + (peak.value - value_offset) / 254.0 * (right - left)
+            canvas.create_line(
+                peak_x, top, peak_x, bottom, fill="#ffd60a", width=2
+            )
         canvas.create_text(
             left,
             4,
             text=(
-                f"{title}   peak={peak.value:.1f}   support={peak.support:.3f}   "
-                f"prominence={peak.prominence:.3f}   score={peak.score:.3f}"
+                f"{title}  peak={peak.value:.1f}  W={weight:.2f}  E={evidence:.3f}\n"
+                f"shape={peak.score:.3f}  support={peak.support:.3f}  "
+                f"prominence={peak.prominence:.3f}"
             ),
             fill="#e6edf3",
             anchor="nw",
@@ -640,23 +855,51 @@ class DSViewer:
             self.center_label,
         )
 
+    def _live_confidence(self):
+        snapshot = self.snapshot
+        if snapshot is None:
+            return None
+        age_us = max(
+            0.0, time.monotonic() - snapshot.published_wall_time
+        ) * 1_000_000.0
+        values = confidence_at_age(
+            snapshot.result,
+            age_us,
+            snapshot.decay_tau_us,
+            snapshot.evidence_w0,
+        )
+        return age_us, values
+
     def _update_result_and_marker(self):
         if self.snapshot is None:
             return
         result = self.snapshot.result
+        live = self._live_confidence()
+        if live is None:
+            return
+        age_us, (
+            current_score,
+            d_weight,
+            s_weight,
+            d_evidence,
+            s_evidence,
+            balance,
+        ) = live
         threshold = self.threshold_state.get()
         accepted = (
             result.enough_events
             and result.inside_view
-            and result.score >= threshold
+            and current_score >= threshold
         )
-        state = "SHOW latest centre" if accepted else "HIDE below threshold"
+        state = "SHOW live centre" if accepted else "HIDE below threshold"
         self.result_text.set(
-            f"DS score={result.score:.3f}  threshold={threshold:.3f}  {state}\n"
-            f"D={result.d_peak.value:.1f} (n={result.d_event_count})    "
-            f"S={result.s_peak.value:.1f} (n={result.s_event_count})\n"
+            f"confidence={current_score:.3f}  threshold={threshold:.3f}  {state}\n"
+            f"D={result.d_peak.value:.1f} (W={d_weight:.2f}, E={d_evidence:.3f})    "
+            f"S={result.s_peak.value:.1f} (W={s_weight:.2f}, E={s_evidence:.3f})\n"
             f"centre=({result.cx:.1f}, {result.cy:.1f})    "
-            f"window={WINDOW_EVENTS}, step={UPDATE_STEP_EVENTS}, "
+            f"balance={balance:.3f}  age={age_us / 1000.0:.0f} ms\n"
+            f"tau={self.snapshot.decay_tau_us / 1000.0:.0f} ms, "
+            f"W0={self.snapshot.evidence_w0:g}, step={UPDATE_STEP_EVENTS}, "
             f"update={self.snapshot.update_count:,}"
         )
         marker_items = self._prediction_marker_items()
@@ -678,7 +921,7 @@ class DSViewer:
             self.center_label,
             text=(
                 f"DS ({result.cx:.1f}, {result.cy:.1f})  "
-                f"{result.score:.3f}"
+                f"C={current_score:.3f}"
             ),
         )
         for item in marker_items:
@@ -698,25 +941,43 @@ class DSViewer:
             return
         self._drain_latest_snapshot()
         self._draw_event_image()
-        if (
-            self.snapshot is not None
-            and self.snapshot.update_count != self.last_histogram_update
-        ):
-            self.last_histogram_update = self.snapshot.update_count
-            self._draw_histogram(
-                self.d_canvas,
-                self.snapshot.d_histogram,
-                -127,
-                "D = y - x",
-                self.snapshot.result.d_peak,
+        now = time.monotonic()
+        if self.snapshot is not None:
+            live = self._live_confidence()
+            age_us, (
+                _score,
+                d_weight,
+                s_weight,
+                d_evidence,
+                s_evidence,
+                _balance,
+            ) = live
+            is_new = self.snapshot.update_count != self.last_histogram_update
+            redraw_due = (
+                now - self.last_histogram_draw_time >= self.histogram_refresh_sec
             )
-            self._draw_histogram(
-                self.s_canvas,
-                self.snapshot.s_histogram,
-                0,
-                "S = x + y",
-                self.snapshot.result.s_peak,
-            )
+            if is_new or redraw_due:
+                self.last_histogram_update = self.snapshot.update_count
+                self.last_histogram_draw_time = now
+                decay = float(np.exp(-age_us / self.snapshot.decay_tau_us))
+                self._draw_histogram(
+                    self.d_canvas,
+                    self.snapshot.d_histogram * decay,
+                    -127,
+                    "D = y - x",
+                    self.snapshot.result.d_peak,
+                    d_weight,
+                    d_evidence,
+                )
+                self._draw_histogram(
+                    self.s_canvas,
+                    self.snapshot.s_histogram * decay,
+                    0,
+                    "S = x + y",
+                    self.snapshot.result.s_peak,
+                    s_weight,
+                    s_evidence,
+                )
             self._update_result_and_marker()
 
         state, event_rate, update_rate, error = self.runtime_status.read()
@@ -734,13 +995,25 @@ class DSViewer:
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
-        description="Real-time 200-event / 6-event-step D/S centre demo"
+        description="Real-time event-triggered, time-decayed D/S centre demo"
     )
     parser.add_argument(
         "--peak-threshold",
         type=float,
-        default=0.15,
-        help="minimum combined D/S peak score in 0..1 (default: 0.15)",
+        default=DEFAULT_PEAK_THRESHOLD,
+        help="minimum combined D/S confidence in 0..1 (default: 0.14)",
+    )
+    parser.add_argument(
+        "--decay-tau-ms",
+        type=float,
+        default=DEFAULT_DECAY_TAU_MS,
+        help="D/S event time-decay constant in milliseconds (default: 400)",
+    )
+    parser.add_argument(
+        "--evidence-w0",
+        type=float,
+        default=DEFAULT_EVIDENCE_W0,
+        help="effective events per family for 63%% evidence (default: 20)",
     )
     parser.add_argument(
         "--display-fps",
@@ -766,6 +1039,11 @@ def parse_args(argv=None):
         default=DEFAULT_CUE_HEAD_Y,
         help="fixed cue-head y position in 128x128 coordinates (default: 83)",
     )
+    parser.add_argument(
+        "--no-samna-layer4",
+        action="store_true",
+        help="do not open the separate samnagui Layer-4 activity window",
+    )
     return parser.parse_args(argv)
 
 
@@ -773,6 +1051,10 @@ def main(argv=None):
     args = parse_args(argv)
     if not 0.0 <= args.peak_threshold <= 1.0:
         raise SystemExit("--peak-threshold must be in 0..1")
+    if args.decay_tau_ms <= 0.0:
+        raise SystemExit("--decay-tau-ms must be positive")
+    if args.evidence_w0 <= 0.0:
+        raise SystemExit("--evidence-w0 must be positive")
     if not (0.0 <= args.cue_x < IMAGE_SIZE and 0.0 <= args.cue_y < IMAGE_SIZE):
         raise SystemExit("--cue-x and --cue-y must be in 0..127")
 
@@ -780,7 +1062,14 @@ def main(argv=None):
     stop_event = threading.Event()
     threshold_state = ThresholdState(args.peak_threshold)
     runtime_status = SharedRuntimeStatus()
-    worker = HardwareWorker(snapshots, stop_event, runtime_status)
+    worker = HardwareWorker(
+        snapshots,
+        stop_event,
+        runtime_status,
+        decay_tau_ms=args.decay_tau_ms,
+        evidence_w0=args.evidence_w0,
+        show_samna_layer4=not args.no_samna_layer4,
+    )
 
     root = tk.Tk()
     DSViewer(
@@ -799,7 +1088,7 @@ def main(argv=None):
         root.mainloop()
     finally:
         stop_event.set()
-        worker.join(timeout=2.0)
+        worker.join(timeout=4.0)
 
 
 if __name__ == "__main__":
