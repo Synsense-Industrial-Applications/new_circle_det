@@ -16,7 +16,8 @@ Keys:
     [ / ]       decrease / increase the peak threshold by 0.02
     Q or Esc     close the demo
 
-The last centre that passes the threshold remains visible for 3 seconds.  The
+The latest centre that passes the threshold is displayed immediately.  A new
+D/S update moves or hides the marker without retaining an older centre.  The
 fixed cue-head reference defaults to (68, 83) and can be changed with
 ``--cue-x`` and ``--cue-y``.
 
@@ -67,7 +68,6 @@ PEAK_SUPPORT_HALF_WIDTH = 3
 SECOND_PEAK_EXCLUSION = 8
 MIN_FAMILY_EVENTS = 8
 THRESHOLD_STEP = 0.02
-PREDICTION_HOLD_SEC = 3.0
 DEFAULT_CUE_HEAD_X = 68.0
 DEFAULT_CUE_HEAD_Y = 83.0
 
@@ -416,8 +416,6 @@ class DSViewer:
         self.fade_tau_us = max(float(fade_tau_ms) * 1000.0, 1.0)
         self.snapshot = None
         self.last_histogram_update = -1
-        self.last_prediction = None
-        self.last_prediction_wall_time = 0.0
         self.base_photo = tk.PhotoImage(width=IMAGE_SIZE, height=IMAGE_SIZE)
         self.scaled_photo = tk.PhotoImage(width=self.EVENT_SIDE, height=self.EVENT_SIDE)
         self.image_item = None
@@ -652,7 +650,7 @@ class DSViewer:
             and result.inside_view
             and result.score >= threshold
         )
-        state = "DETECTED; 3 s hold refreshed" if accepted else "below threshold"
+        state = "SHOW latest centre" if accepted else "HIDE below threshold"
         self.result_text.set(
             f"DS score={result.score:.3f}  threshold={threshold:.3f}  {state}\n"
             f"D={result.d_peak.value:.1f} (n={result.d_event_count})    "
@@ -661,29 +659,14 @@ class DSViewer:
             f"window={WINDOW_EVENTS}, step={UPDATE_STEP_EVENTS}, "
             f"update={self.snapshot.update_count:,}"
         )
-        if accepted:
-            self.last_prediction = (result.cx, result.cy, result.score)
-            self.last_prediction_wall_time = time.monotonic()
-        self._update_prediction_marker()
-
-    def _update_prediction_marker(self):
-        """Keep the last threshold-passing D/S centre visible for 3 seconds."""
-
         marker_items = self._prediction_marker_items()
-        if self.last_prediction is None:
-            for item in marker_items:
-                self.event_canvas.itemconfigure(item, state="hidden")
-            return
-        elapsed = time.monotonic() - self.last_prediction_wall_time
-        if elapsed >= PREDICTION_HOLD_SEC:
-            self.last_prediction = None
+        if not accepted:
             for item in marker_items:
                 self.event_canvas.itemconfigure(item, state="hidden")
             return
 
-        cx, cy, score = self.last_prediction
-        x = (cx + 0.5) * self.SCALE
-        y = (cy + 0.5) * self.SCALE
+        x = (result.cx + 0.5) * self.SCALE
+        y = (result.cy + 0.5) * self.SCALE
         radius = 9.0
         self.event_canvas.coords(
             self.center_circle, x - radius, y - radius, x + radius, y + radius
@@ -691,10 +674,12 @@ class DSViewer:
         self.event_canvas.coords(self.center_horizontal, x - 14, y, x + 14, y)
         self.event_canvas.coords(self.center_vertical, x, y - 14, x, y + 14)
         self.event_canvas.coords(self.center_label, x + 11, y - 11)
-        remaining = max(0.0, PREDICTION_HOLD_SEC - elapsed)
         self.event_canvas.itemconfigure(
             self.center_label,
-            text=f"DS ({cx:.1f}, {cy:.1f})  {score:.3f}  {remaining:.1f}s",
+            text=(
+                f"DS ({result.cx:.1f}, {result.cy:.1f})  "
+                f"{result.score:.3f}"
+            ),
         )
         for item in marker_items:
             self.event_canvas.itemconfigure(item, state="normal")
@@ -713,7 +698,6 @@ class DSViewer:
             return
         self._drain_latest_snapshot()
         self._draw_event_image()
-        self._update_prediction_marker()
         if (
             self.snapshot is not None
             and self.snapshot.update_count != self.last_histogram_update
