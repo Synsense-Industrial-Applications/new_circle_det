@@ -16,6 +16,10 @@ Keys:
     [ / ]       decrease / increase the peak threshold by 0.02
     Q or Esc     close the demo
 
+The last centre that passes the threshold remains visible for 3 seconds.  The
+fixed cue-head reference defaults to (68, 83) and can be changed with
+``--cue-x`` and ``--cue-y``.
+
 The UI uses Tk (Python standard library) and runs in the main thread.  Hardware
 reading and D/S calculation run in a worker thread.  A one-element queue keeps
 only the newest snapshot, so a burst of events cannot build a rendering backlog.
@@ -63,6 +67,9 @@ PEAK_SUPPORT_HALF_WIDTH = 3
 SECOND_PEAK_EXCLUSION = 8
 MIN_FAMILY_EVENTS = 8
 THRESHOLD_STEP = 0.02
+PREDICTION_HOLD_SEC = 3.0
+DEFAULT_CUE_HEAD_X = 68.0
+DEFAULT_CUE_HEAD_Y = 83.0
 
 
 @dataclass(frozen=True)
@@ -397,6 +404,8 @@ class DSViewer:
         runtime_status,
         display_fps=30.0,
         fade_tau_ms=80.0,
+        cue_head_x=DEFAULT_CUE_HEAD_X,
+        cue_head_y=DEFAULT_CUE_HEAD_Y,
     ):
         self.root = root
         self.output_queue = output_queue
@@ -407,6 +416,8 @@ class DSViewer:
         self.fade_tau_us = max(float(fade_tau_ms) * 1000.0, 1.0)
         self.snapshot = None
         self.last_histogram_update = -1
+        self.last_prediction = None
+        self.last_prediction_wall_time = 0.0
         self.base_photo = tk.PhotoImage(width=IMAGE_SIZE, height=IMAGE_SIZE)
         self.scaled_photo = tk.PhotoImage(width=self.EVENT_SIDE, height=self.EVENT_SIDE)
         self.image_item = None
@@ -452,14 +463,47 @@ class DSViewer:
             self.event_canvas.create_line(
                 0, location, self.EVENT_SIDE, location, fill="#263240"
             )
+        cue_x = (float(cue_head_x) + 0.5) * self.SCALE
+        cue_y = (float(cue_head_y) + 0.5) * self.SCALE
+        cue_radius = 7.0
+        self.cue_circle = self.event_canvas.create_oval(
+            cue_x - cue_radius,
+            cue_y - cue_radius,
+            cue_x + cue_radius,
+            cue_y + cue_radius,
+            outline="#ff9f0a",
+            width=2,
+        )
+        self.cue_horizontal = self.event_canvas.create_line(
+            cue_x - 11, cue_y, cue_x + 11, cue_y, fill="#ff9f0a", width=2
+        )
+        self.cue_vertical = self.event_canvas.create_line(
+            cue_x, cue_y - 11, cue_x, cue_y + 11, fill="#ff9f0a", width=2
+        )
+        self.cue_label = self.event_canvas.create_text(
+            cue_x + 10,
+            cue_y - 10,
+            text=f"cue ({cue_head_x:g}, {cue_head_y:g})",
+            fill="#ff9f0a",
+            anchor="sw",
+        )
+
         self.center_circle = self.event_canvas.create_oval(
-            0, 0, 0, 0, outline="#ffffff", width=2, state="hidden"
+            0, 0, 0, 0, outline="#00e5ff", width=3, state="hidden"
         )
         self.center_horizontal = self.event_canvas.create_line(
-            0, 0, 0, 0, fill="#ffffff", width=2, state="hidden"
+            0, 0, 0, 0, fill="#00e5ff", width=3, state="hidden"
         )
         self.center_vertical = self.event_canvas.create_line(
-            0, 0, 0, 0, fill="#ffffff", width=2, state="hidden"
+            0, 0, 0, 0, fill="#00e5ff", width=3, state="hidden"
+        )
+        self.center_label = self.event_canvas.create_text(
+            0,
+            0,
+            text="DS centre",
+            fill="#00e5ff",
+            anchor="sw",
+            state="hidden",
         )
 
         right = ttk.Frame(outer)
@@ -590,6 +634,14 @@ class DSViewer:
             right, height - 7, text=str(value_offset + 254), fill="#aab7c4"
         )
 
+    def _prediction_marker_items(self):
+        return (
+            self.center_circle,
+            self.center_horizontal,
+            self.center_vertical,
+            self.center_label,
+        )
+
     def _update_result_and_marker(self):
         if self.snapshot is None:
             return
@@ -600,7 +652,7 @@ class DSViewer:
             and result.inside_view
             and result.score >= threshold
         )
-        state = "SHOW" if accepted else "HIDE"
+        state = "DETECTED; 3 s hold refreshed" if accepted else "below threshold"
         self.result_text.set(
             f"DS score={result.score:.3f}  threshold={threshold:.3f}  {state}\n"
             f"D={result.d_peak.value:.1f} (n={result.d_event_count})    "
@@ -609,25 +661,51 @@ class DSViewer:
             f"window={WINDOW_EVENTS}, step={UPDATE_STEP_EVENTS}, "
             f"update={self.snapshot.update_count:,}"
         )
-        marker_items = (
-            self.center_circle,
-            self.center_horizontal,
-            self.center_vertical,
-        )
-        if not accepted:
+        if accepted:
+            self.last_prediction = (result.cx, result.cy, result.score)
+            self.last_prediction_wall_time = time.monotonic()
+        self._update_prediction_marker()
+
+    def _update_prediction_marker(self):
+        """Keep the last threshold-passing D/S centre visible for 3 seconds."""
+
+        marker_items = self._prediction_marker_items()
+        if self.last_prediction is None:
             for item in marker_items:
                 self.event_canvas.itemconfigure(item, state="hidden")
             return
-        x = (result.cx + 0.5) * self.SCALE
-        y = (result.cy + 0.5) * self.SCALE
+        elapsed = time.monotonic() - self.last_prediction_wall_time
+        if elapsed >= PREDICTION_HOLD_SEC:
+            self.last_prediction = None
+            for item in marker_items:
+                self.event_canvas.itemconfigure(item, state="hidden")
+            return
+
+        cx, cy, score = self.last_prediction
+        x = (cx + 0.5) * self.SCALE
+        y = (cy + 0.5) * self.SCALE
         radius = 9.0
         self.event_canvas.coords(
             self.center_circle, x - radius, y - radius, x + radius, y + radius
         )
         self.event_canvas.coords(self.center_horizontal, x - 14, y, x + 14, y)
         self.event_canvas.coords(self.center_vertical, x, y - 14, x, y + 14)
+        self.event_canvas.coords(self.center_label, x + 11, y - 11)
+        remaining = max(0.0, PREDICTION_HOLD_SEC - elapsed)
+        self.event_canvas.itemconfigure(
+            self.center_label,
+            text=f"DS ({cx:.1f}, {cy:.1f})  {score:.3f}  {remaining:.1f}s",
+        )
         for item in marker_items:
             self.event_canvas.itemconfigure(item, state="normal")
+            self.event_canvas.tag_raise(item)
+        # The fixed cue-head marker must also stay above the refreshed image.
+        for item in (
+            self.cue_circle,
+            self.cue_horizontal,
+            self.cue_vertical,
+            self.cue_label,
+        ):
             self.event_canvas.tag_raise(item)
 
     def refresh(self):
@@ -635,6 +713,7 @@ class DSViewer:
             return
         self._drain_latest_snapshot()
         self._draw_event_image()
+        self._update_prediction_marker()
         if (
             self.snapshot is not None
             and self.snapshot.update_count != self.last_histogram_update
@@ -691,6 +770,18 @@ def parse_args(argv=None):
         default=80.0,
         help="event display fading time constant (default: 80 ms)",
     )
+    parser.add_argument(
+        "--cue-x",
+        type=float,
+        default=DEFAULT_CUE_HEAD_X,
+        help="fixed cue-head x position in 128x128 coordinates (default: 68)",
+    )
+    parser.add_argument(
+        "--cue-y",
+        type=float,
+        default=DEFAULT_CUE_HEAD_Y,
+        help="fixed cue-head y position in 128x128 coordinates (default: 83)",
+    )
     return parser.parse_args(argv)
 
 
@@ -698,6 +789,8 @@ def main(argv=None):
     args = parse_args(argv)
     if not 0.0 <= args.peak_threshold <= 1.0:
         raise SystemExit("--peak-threshold must be in 0..1")
+    if not (0.0 <= args.cue_x < IMAGE_SIZE and 0.0 <= args.cue_y < IMAGE_SIZE):
+        raise SystemExit("--cue-x and --cue-y must be in 0..127")
 
     snapshots = queue.Queue(maxsize=1)
     stop_event = threading.Event()
@@ -714,6 +807,8 @@ def main(argv=None):
         runtime_status,
         display_fps=args.display_fps,
         fade_tau_ms=args.fade_tau_ms,
+        cue_head_x=args.cue_x,
+        cue_head_y=args.cue_y,
     )
     worker.start()
     try:
