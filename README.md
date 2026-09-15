@@ -4,11 +4,12 @@
 
 `layer4_20260727_155031_part0001.csv`
 
-原有的 `event_stream_player.py` 和数据文件保持不变。新程序不依赖该播放器缺失的
-`online_ring_scorer`，只复用了并测试了其中的正确解码规则。
+`event_stream_player.py` 是独立的纯事件流播放器，不再依赖
+`online_ring_scorer`、圆检测代码、Matplotlib 或 Pillow。
 
 项目提供两种使用方式：
 
+- `event_stream_player.py`：只还原并播放 Layer-4 事件，提供时间渐隐、调速、跳转和区间循环；
 - `visualize_circle_detection.py`：读取 CSV 的离线逐事件播放器，可实时调整置信度公式参数；
 - `algorithm_Demo/Demo.py`：连接 Speck2f 的硬件实时检测程序，使用同一套最新自适应圆检测器。
 
@@ -18,12 +19,34 @@
 new_circle_det/
 ├─ circle_detection/          # 圆候选、跟踪和小铁置信度算法
 ├─ algorithm_Demo/            # Speck2f 硬件实时 Demo
+├─ event_stream_player.py      # 独立、轻量的纯事件流播放器
 ├─ visualize_circle_detection.py
 ├─ four_region_flow.py        # Layer-4 事件坐标及方向解码
 ├─ test_*.py                  # 算法与播放器测试
 ├─ layer4_*.csv               # 离线示例事件流
 └─ XIAOIRON_CONFIDENCE.md     # 置信度公式说明
 ```
+
+## 纯事件流播放器
+
+新播放器只依赖 Python 标准库中的 Tk 和 NumPy。它可以直接播放
+`algorithm_Demo/Demo_record.py` 生成的 `x,y,feature,timestamp` CSV：
+
+```powershell
+python event_stream_player.py "algorithm_Demo\recordings\layer4_20260914_155122_749690.csv"
+```
+
+也可以不传文件名，启动后点击“打开 CSV”。播放器按照原始时间戳播放，提供
+0.01×到20×速度、播放/暂停、逐事件前后移动、准确事件序号跳转、进度拖动、
+区间循环、全局事件密度时间轴，以及可调拖尾范围、指数渐隐和亮度增益。
+
+仅安装播放器依赖：
+
+```powershell
+python -m pip install -r requirements_player.txt
+```
+
+Linux若缺少Tk，请再通过系统包管理器安装`python3-tk`。
 
 ## 硬件实时 Demo
 
