@@ -151,6 +151,37 @@ class DemoRecordTests(unittest.TestCase):
             source,
         )
 
+    def test_split_network_keeps_the_64_by_64_by_16_output_contract(self):
+        source = (SCRIPT_DIR / "Demo.py").read_text(encoding="utf-8")
+        compact = " ".join(source.split())
+        self.assertIn("SHIFT_OUT_SIZE = 2", source)
+        self.assertIn(
+            "padding=1, stride=2, kernel_size=3,",
+            source,
+        )
+        self.assertEqual(
+            compact.count(
+                "output_shape_feature=6, output_shape_size_x=63, "
+                "output_shape_size_y=63,"
+            ),
+            2,
+        )
+        self.assertEqual(
+            compact.count(
+                "output_shape_feature=4, output_shape_size_x=62, "
+                "output_shape_size_y=62,"
+            ),
+            2,
+        )
+        self.assertIn(
+            "padding=3, stride=1, kernel_size=5, "
+            "input_shape_feature=8, input_shape_size_x=62, "
+            "input_shape_size_y=62,",
+            compact,
+        )
+        self.assertEqual(self.recorder.LAYER4_SOURCE_SIZE, 64)
+        self.assertEqual(self.recorder.LAYER4_FEATURE_COUNT, 16)
+
 
 if __name__ == "__main__":
     unittest.main()

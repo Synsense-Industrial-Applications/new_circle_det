@@ -27,7 +27,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from circle_detection import AdaptiveDetectorConfig, XiaoironConfig  # noqa: E402
-from layer4_layout import LAYER4_FEATURE_COUNT  # noqa: E402
+from layer4_layout import (  # noqa: E402
+    LAYER4_FEATURE_COUNT,
+    LAYER4_SOURCE_SIZE,
+)
 from circle_runtime import (  # noqa: E402
     CircleDetectionPipeline,
     CircleFilterConfig,
@@ -148,41 +151,92 @@ RUNTIME_LOG_EVENT_BUFFER_ROWS = 8192
 
 ch = ChannelHelper(input_channel=1, input_size=128, output_size=64)
 
-# ── 构建卷积核 ──
-w_128 = np.zeros((2, 2, 5, 5))
-w_128[1, 1, range(5), range(5)] = [-1, -1, 1, -2, -1]
-w_128[1, 0, range(5), range(5)] = [0, 0, -1, 2, 0]
-w_128[0, 1, range(5), range(5)] = [-1, -2, 1, -1, -1]
-w_128[0, 0, range(5), range(5)] = [0, 2, -1, 0, 0]
-w_1_to_2 = np.concatenate([np.concatenate([ch.get_kernel(w_128[i, j]) for j in range(2)], axis=1) for i in range(2)], axis=0)
-w_1_to_2_t = np.concatenate([np.concatenate([ch.get_kernel(w_128[:, :, ::-1, :][i, j]) for j in range(2)], axis=1) for i in range(2)], axis=0)
+# ── 构建 optical_flow_split_d_on_off_3_k_conv.py 的最小 2x2 卷积核 ──
+# 128 侧图案整体平移后，所有有效 tap 都落在映射核的单侧，因此原来的
+# 3x3 粗网格核可以无损裁成 2x2。两级卷积会令输出由 64 缩到 62。
+SHIFT_OUT_SIZE = 2
 
-w_128 = np.zeros((2, 1, 5, 5))
-w_128[1, 0, range(5), range(5)] = [-1, 0, 0, -2, -1]
-w_128[0, 0, range(5), range(5)] = [-1, -2, 0, 0, -1]
-w_0_to_3 = np.concatenate([np.concatenate([ch.get_kernel(w_128[i, j]) for j in range(1)], axis=1) for i in range(2)], axis=0)
-w_0_to_3_t = np.concatenate([np.concatenate([ch.get_kernel(w_128[:, :, ::-1, :][i, j]) for j in range(1)], axis=1) for i in range(2)], axis=0)
 
-w_128 = np.zeros((2, 2, 5, 5))
-w_128[1, 1, range(5), range(5)] = [0, 1, 2, 0, 0]
-w_128[1, 0, range(5), range(5)] = [0, 0, -1, 0, 0]
-w_128[0, 1, range(5), range(5)] = [0, 0, -1, 0, 0]
-w_128[0, 0, range(5), range(5)] = [0, 0, 2, 1, 0]
-w_2_to_3 = np.concatenate([np.concatenate([ch.get_kernel(w_128[i, j]) for j in range(2)], axis=1) for i in range(2)], axis=0)
-w_2_to_3_t = np.concatenate([np.concatenate([ch.get_kernel(w_128[:, :, ::-1, :][i, j]) for j in range(2)], axis=1) for i in range(2)], axis=0)
+def shift_pattern(pattern, shift_x=1, shift_y=1):
+    """平移 128 侧图案，并验证没有非零 tap 被移出边界。"""
+
+    shifted = np.zeros_like(pattern)
+    size = pattern.shape[-1]
+    for x_index in range(size):
+        for y_index in range(size):
+            new_x = x_index + shift_x
+            new_y = y_index + shift_y
+            if 0 <= new_x < size and 0 <= new_y < size:
+                shifted[:, :, new_x, new_y] = pattern[:, :, x_index, y_index]
+            else:
+                assert not np.any(pattern[:, :, x_index, y_index]), (
+                    "kernel shift would discard a non-zero tap"
+                )
+    return shifted
+
+
+def map_kernel(kernel, size=SHIFT_OUT_SIZE):
+    """映射到 64 空间，并使用新网络的最小 2x2 输出核。"""
+
+    mapped = ch.get_kernel(kernel)
+    if mapped.shape[-2:] == (size, size):
+        return mapped
+    if mapped.shape[-2] < size or mapped.shape[-1] < size:
+        raise ValueError(
+            f"mapped kernel {mapped.shape[-2:]} is smaller than {(size, size)}"
+        )
+
+    # shift_pattern() moves all non-zero taps into the lower-right 2x2 part
+    # of ChannelHelper's 3x3 result. Verify that cropping is lossless.
+    row_start = mapped.shape[-2] - size
+    col_start = mapped.shape[-1] - size
+    discarded = mapped.copy()
+    discarded[..., row_start:, col_start:] = 0
+    if np.any(discarded):
+        raise ValueError("minimal-kernel crop would discard a non-zero tap")
+    return mapped[..., row_start:, col_start:]
+
+
+def build_64(pattern, transpose=False):
+    """镜像可选的 128 侧图案，平移后映射为 2x2 粗网格卷积核。"""
+
+    if transpose:
+        pattern = pattern[:, :, ::-1, :]
+    pattern = shift_pattern(pattern, 1, 1)
+    return np.concatenate(
+        [
+            np.concatenate(
+                [map_kernel(pattern[i, j]) for j in range(pattern.shape[1])],
+                axis=1,
+            )
+            for i in range(pattern.shape[0])
+        ],
+        axis=0,
+    )
+
 
 M = 5
-w_128 = np.zeros((2, 2, M - 2, M - 2))
-w_128[1, 1, range(M - 2), range(M - 2)] = [-1] * (M - 4) + [-2, 0]
-w_128[0, 0, range(M - 2), range(M - 2)] = [0, -2] + [-1] * (M - 4)
-w_2_to_4 = np.concatenate([np.concatenate([ch.get_kernel(w_128[i, j]) for j in range(2)], axis=1) for i in range(2)], axis=0)
-w_2_to_4_t = np.concatenate([np.concatenate([ch.get_kernel(w_128[:, :, ::-1, :][i, j]) for j in range(2)], axis=1) for i in range(2)], axis=0)
+w_128 = np.zeros((2, 2, M, M))
+w_128[1, 1, range(M), range(M)] = [0, -1, 1, -2, 0]
+w_128[1, 0, range(M), range(M)] = [0, 0, -1, 2, 0]
+w_128[0, 1, range(M), range(M)] = [0, -2, 1, -1, 0]
+w_128[0, 0, range(M), range(M)] = [0, 2, -1, 0, 0]
+w_1_to_2 = build_64(w_128)
+w_1_to_2_t = build_64(w_128, transpose=True)
 
-w_128 = np.zeros((2, 2, M - 2, M - 2))
-w_128[1, 1, range(M - 2), range(M - 2)] = [1] * (M - 3) + [2]
-w_128[0, 0, range(M - 2), range(M - 2)] = [2] + [1] * (M - 3)
-w_3_to_4 = np.concatenate([np.concatenate([ch.get_kernel(w_128[i, j]) for j in range(2)], axis=1) for i in range(2)], axis=0)
-w_3_to_4_t = np.concatenate([np.concatenate([ch.get_kernel(w_128[:, :, ::-1, :][i, j]) for j in range(2)], axis=1) for i in range(2)], axis=0)
+w_128 = np.zeros((2, 1, M, M))
+w_128[1, 0, range(M), range(M)] = [0, 0, 0, -2, 0]
+w_128[0, 0, range(M), range(M)] = [0, -2, 0, 0, 0]
+w_0_to_3 = build_64(w_128)
+w_0_to_3_t = build_64(w_128, transpose=True)
+
+w_128 = np.zeros((2, 2, M, M))
+w_128[1, 1, range(M), range(M)] = [0, 1, 2, 0, 0]
+w_128[1, 0, range(M), range(M)] = [0, 0, -1, 0, 0]
+w_128[0, 1, range(M), range(M)] = [0, 0, -1, 0, 0]
+w_128[0, 0, range(M), range(M)] = [0, 0, 2, 1, 0]
+w_2_to_3 = build_64(w_128)
+w_2_to_3_t = build_64(w_128, transpose=True)
 
 # ── JIT filter for samnagui DVS event assembly ──
 jit_node = samna.graph.JitFunctionFilter('assembleDvsEvent', '''
@@ -400,24 +454,27 @@ def create_layer(layer_name, layer, padding, stride, kernel_size,
 
 
 def configure_cnn_pipeline(raw_dvs_monitor=False):
-    """构建 CNN 流水线，并按需开启原始 DVS 事件监控。"""
+    """构建 split-D-ON/OFF 3x3 输入、2x2 映射核的 CNN 流水线。"""
     config.dvs_layer.destinations[0].layer = layer_0_0
     config.dvs_layer.destinations[0].enable = 1
+    # Both split branches must receive the same two-polarity DVS input.  The
+    # reference script defines both branches but leaves this route commented;
+    # enabling it is required for the S-family (features 1/2/5/6) to emit.
     config.dvs_layer.destinations[1].layer = layer_0_1
     config.dvs_layer.destinations[1].enable = 1
     optimal_sram_config()
 
     # ── Layer 0_0 ──
-    weights = np.zeros((16, 2, 4, 4), dtype=np.int8)
+    weights = np.zeros((16, 2, 3, 3), dtype=np.int8)
     for i in range(2):
         for j in range(2):
-            weights[j * 2 + i, j, range(i, i + 3), range(i + 2, i - 1, -1)] = [1, 2, 1]
-            weights[4 + j * 2 + i, j, range(i, i + 3), range(i + 2, i - 1, -1)] = [1, 2, 1]
-            weights[8 + j * 2 + i, j, range(i, i + 3), range(1 - i, 4 - i)] = [1, 2, 1]
-            weights[12 + j * 2 + i, j, range(i, i + 3), range(1 - i, 4 - i)] = [1, 2, 1]
+            weights[j * 2 + i, j, i:i + 2, i:i + 2] = 1
+            weights[4 + j * 2 + i, j, i:i + 2, i:i + 2] = 1
+            weights[8 + j * 2 + i, j, i:i + 2, 1 - i:3 - i] = 1
+            weights[12 + j * 2 + i, j, i:i + 2, 1 - i:3 - i] = 1
     create_layer(
         layer_name="layer_0_0", layer=layer_0_0,
-        padding=1, stride=2, kernel_size=4,
+        padding=1, stride=2, kernel_size=3,
         input_shape_feature=2, input_shape_size_x=128, input_shape_size_y=128,
         output_shape_feature=8, output_shape_size_x=64, output_shape_size_y=64,
         threshold_high=3, threshold_low=-1,
@@ -429,7 +486,7 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
     # ── Layer 0_1 ──
     create_layer(
         layer_name="layer_0_1", layer=layer_0_1,
-        padding=1, stride=2, kernel_size=4,
+        padding=1, stride=2, kernel_size=3,
         input_shape_feature=2, input_shape_size_x=128, input_shape_size_y=128,
         output_shape_feature=8, output_shape_size_x=64, output_shape_size_y=64,
         threshold_high=3, threshold_low=-1,
@@ -471,7 +528,7 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
         weights=weights,
         destinations_0=layer_2_1,
         destinations_1=layer_2_1,
-        feature_shift_0=4,
+        feature_shift_1=4,
     )
 
     # ── Layer 2_0 ──
@@ -483,7 +540,7 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
         layer_name="layer_2_0", layer=layer_2_0,
         padding=(w_1_to_2.shape[2] - 1) // 2, stride=1, kernel_size=w_1_to_2.shape[2],
         input_shape_feature=8, input_shape_size_x=64, input_shape_size_y=64,
-        output_shape_feature=6, output_shape_size_x=64, output_shape_size_y=64,
+        output_shape_feature=6, output_shape_size_x=63, output_shape_size_y=63,
         threshold_high=2, threshold_low=-1,
         weights=weights,
         destinations_0=layer_3_0,
@@ -498,11 +555,10 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
         layer_name="layer_2_1", layer=layer_2_1,
         padding=(w_1_to_2.shape[2] - 1) // 2, stride=1, kernel_size=w_1_to_2.shape[2],
         input_shape_feature=8, input_shape_size_x=64, input_shape_size_y=64,
-        output_shape_feature=6, output_shape_size_x=64, output_shape_size_y=64,
+        output_shape_feature=6, output_shape_size_x=63, output_shape_size_y=63,
         threshold_high=2, threshold_low=-1,
         weights=weights,
         destinations_1=layer_3_1,
-        feature_shift_0=6,
     )
 
     # ── Layer 3_0 ──
@@ -513,8 +569,8 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
     create_layer(
         layer_name="layer_3_0", layer=layer_3_0,
         padding=(w_2_to_3.shape[2] - 1) // 2, stride=1, kernel_size=w_2_to_3.shape[2],
-        input_shape_feature=6, input_shape_size_x=64, input_shape_size_y=64,
-        output_shape_feature=4, output_shape_size_x=64, output_shape_size_y=64,
+        input_shape_feature=6, input_shape_size_x=63, input_shape_size_y=63,
+        output_shape_feature=4, output_shape_size_x=62, output_shape_size_y=62,
         threshold_high=2, threshold_low=-1,
         weights=weights,
         destinations_0=layer_4,
@@ -528,15 +584,15 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
     create_layer(
         layer_name="layer_3_1", layer=layer_3_1,
         padding=(w_2_to_3.shape[2] - 1) // 2, stride=1, kernel_size=w_2_to_3.shape[2],
-        input_shape_feature=6, input_shape_size_x=64, input_shape_size_y=64,
-        output_shape_feature=4, output_shape_size_x=64, output_shape_size_y=64,
+        input_shape_feature=6, input_shape_size_x=63, input_shape_size_y=63,
+        output_shape_feature=4, output_shape_size_x=62, output_shape_size_y=62,
         threshold_high=2, threshold_low=-1,
         weights=weights,
         destinations_0=layer_4,
         feature_shift_0=4,
     )
 
-    # ── Layer 4 (输出重排) ──
+    # ── Layer 4 (64x64x16 兼容输出头) ──
     # weights = np.zeros((8, 8, 1, 1), dtype=np.int8)
     # weights[0, 0, 0, 0] = 1
     # weights[3, 1, 0, 0] = 1
@@ -555,10 +611,10 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
     #     weights=weights,
     #     monitor_enable=True,
     # )
+    # The imported split-D network reaches this head as 62x62x8.  A 5x5
+    # convolution with padding=3 expands it to the required 64x64 interface.
     # Two eight-channel banks share the optical-flow direction and sub-pixel
-    # address mapping.  Bank 1 uses the complementary spatial diagonal so a
-    # real contour can contribute through both slopes without shifting its
-    # decoded 128x128 position.
+    # address mapping; bank 1 uses the complementary spatial diagonal.
     weights = np.zeros((LAYER4_FEATURE_COUNT, 8, 5, 5), dtype=np.int8)
     tangent = False
     if tangent==True:
@@ -620,10 +676,11 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
 
     create_layer(
         layer_name="layer_4", layer=layer_4,
-        padding=2, stride=1, kernel_size=5,
-        input_shape_feature=8, input_shape_size_x=64, input_shape_size_y=64,
+        padding=3, stride=1, kernel_size=5,
+        input_shape_feature=8, input_shape_size_x=62, input_shape_size_y=62,
         output_shape_feature=LAYER4_FEATURE_COUNT,
-        output_shape_size_x=64, output_shape_size_y=64,
+        output_shape_size_x=LAYER4_SOURCE_SIZE,
+        output_shape_size_y=LAYER4_SOURCE_SIZE,
         threshold_high=4, threshold_low=-1,
         weights=weights,
         monitor_enable=True,

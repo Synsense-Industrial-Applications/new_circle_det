@@ -1,13 +1,16 @@
 # 硬件实时圆检测 Demo
 
-`Demo.py` 保留原 Speck2f/CNN 配置，实时识别部分已替换为项目上级
-`circle_detection/AdaptiveCircleDetector` 的最新方法。
+`Demo.py` 使用 `optical_flow_split_d_on_off_3_k_conv.py` 的 split-D
+前级网络：输入层采用 3x3 卷积，两级方向核采用无损裁剪后的 2x2 最小核。
+实时识别部分使用项目上级 `circle_detection/AdaptiveCircleDetector` 的最新方法。
 
 ## 数据流
 
 ```text
 Speck2f Layer-4 事件
-  -> 64x64x16 解码为 128x128 的 (x, y, direction, timestamp)
+  -> split-D 前级：64x64 -> 63x63 -> 62x62
+  -> 5x5、padding=3 的双斜率输出头：64x64x16
+  -> 解码为 128x128 的 (x, y, direction, timestamp)
   -> 最近 230 个事件的自适应三点圆共识
   -> xiaoiron_confidence
   -> 可扩展具名过滤链
@@ -16,9 +19,10 @@ Speck2f Layer-4 事件
   -> 击球前后事件慢速回放
 ```
 
-Layer-4 的 `0..7` 是原始光流输出通道，`8..15` 保留相同的光流方向和
-2x2 子像素地址，但使用互补空间卷积核。普通圆检测和 `DS_Demo.py` 都按
-原始光流方向合并对应的两组通道，再分别累计 `D=y-x` 和 `S=x+y`。
+Layer-4 的最终接口仍为 `64x64x16`。`0..7` 是第一组光流输出通道，
+`8..15` 保留相同的光流方向和 2x2 子像素地址，但使用互补空间卷积核。
+普通圆检测和 `DS_Demo.py` 都按原始光流方向合并对应的两组通道，再分别
+累计 `D=y-x` 和 `S=x+y`。
 
 检测器默认每 6 个输入事件更新一次，但每个事件都会按原始顺序进入窗口。
 没有把检测器的缓存结果重复当作新圆输出。
