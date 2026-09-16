@@ -9,6 +9,9 @@ performed.
 Run:
     python Demo_record.py
 
+At startup, enter a subfolder name to save this run under
+``recordings/<name>/``. Press Enter to save directly under ``recordings/``.
+
 Controls:
     R: start/stop recording.  Each new start creates a new CSV file.
     Q: quit the program.
@@ -55,12 +58,59 @@ STATUS_INTERVAL_SEC = 1.0
 CSV_COLUMNS = ("x", "y", "feature", "timestamp")
 START_STOP_KEY = "r"
 QUIT_KEY = "q"
+INVALID_FOLDER_CHARACTERS = frozenset('<>:"/\\|?*')
 
 
-def _new_output_path() -> Path:
+def choose_recording_directory() -> Path:
+    """Ask for one safe subfolder and keep all output under recordings/."""
+
     RECORD_DIR.mkdir(parents=True, exist_ok=True)
+    recording_root = RECORD_DIR.resolve()
+    while True:
+        try:
+            folder_name = input(
+                "Recording folder name (Enter for recordings/): "
+            ).strip()
+        except EOFError:
+            folder_name = ""
+            print("No interactive input; using recordings/.")
+
+        if not folder_name:
+            output_dir = recording_root
+        elif (
+            folder_name in {".", ".."}
+            or any(character in INVALID_FOLDER_CHARACTERS for character in folder_name)
+            or any(ord(character) < 32 for character in folder_name)
+            or folder_name.endswith((" ", "."))
+        ):
+            print(
+                "Invalid folder name. Enter one folder name without path "
+                "separators or <>:\"/\\|?*."
+            )
+            continue
+        else:
+            output_dir = (RECORD_DIR / folder_name).resolve()
+
+        if output_dir != recording_root and recording_root not in output_dir.parents:
+            print("Invalid folder name: output must stay inside recordings/.")
+            continue
+        try:
+            output_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            print(f"Cannot use that folder: {error}")
+            continue
+        if not output_dir.is_dir():
+            print("Cannot use that name because it is not a directory.")
+            continue
+
+        print(f"Recording output directory: {output_dir}")
+        return output_dir
+
+
+def _new_output_path(output_dir: Path) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    return RECORD_DIR / f"layer4_{stamp}.csv"
+    return output_dir / f"layer4_{stamp}.csv"
 
 
 def _event_row(event):
@@ -125,7 +175,8 @@ class ConsoleKeyReader:
 class CsvRecordingSession:
     """Own one CSV file and its per-recording counters."""
 
-    def __init__(self):
+    def __init__(self, output_dir):
+        self.output_dir = Path(output_dir)
         self.csv_file = None
         self.writer = None
         self.output_path = None
@@ -143,7 +194,7 @@ class CsvRecordingSession:
     def start(self):
         if self.active:
             return
-        self.output_path = _new_output_path()
+        self.output_path = _new_output_path(self.output_dir)
         self.csv_file = self.output_path.open(
             "w", newline="", encoding="utf-8", buffering=1024 * 1024
         )
@@ -207,6 +258,7 @@ class CsvRecordingSession:
 def record_layer4():
     """Configure the board and record any number of Layer-4 CSV sessions."""
 
+    output_dir = choose_recording_directory()
     print("Configuring the SNN/CNN pipeline from Demo.py...")
     configure_cnn_pipeline()
 
@@ -244,7 +296,7 @@ def record_layer4():
     total_layer4_seen = 0
     last_status = time.monotonic()
     previous_status_seen = 0
-    session = CsvRecordingSession()
+    session = CsvRecordingSession(output_dir)
     keyboard = ConsoleKeyReader()
 
     print(
