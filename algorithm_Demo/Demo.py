@@ -243,11 +243,16 @@ def open_speck2f_dev_kit():
 
 def build_samna_event_route(dk, graph, endpoint, layers):
     """Build a graph in samna to show CNN layer output in samnagui."""
-    _, layer_filter, _, _, _, streamer = graph.sequential(
-        [dk.get_model_source_node(), "Speck2fOutputMemberSelect",
+    _, event_type_filter, layer_filter, _, _, _, streamer = graph.sequential(
+        [dk.get_model_source_node(), "Speck2fOutputEventTypeFilter",
+         "Speck2fOutputMemberSelect",
          "Speck2fDvsToVizConverter", jit_node,
          "CameraToVizConverter", "VizEventStreamer"]
     )
+    # raw_monitor_enable adds DvsEvent objects to the same output union.  Type
+    # filtering first prevents those events (which have no ``layer`` member)
+    # from entering the CNN-layer member filter.
+    event_type_filter.set_desired_type("speck2f::event::Spike")
     layer_filter.set_white_list(layers, "layer")
 
     config_source, _ = graph.sequential([samna.BasicSourceNode_ui_event(), streamer])
@@ -256,6 +261,24 @@ def build_samna_event_route(dk, graph, endpoint, layers):
     if streamer.wait_for_receiver_count() == 0:
         raise Exception(f'connecting to visualizer on {endpoint} fails')
 
+    return config_source
+
+
+def build_raw_dvs_event_route(dk, graph, endpoint):
+    """Build a samnagui route containing only raw sensor DvsEvent objects."""
+
+    _, event_type_filter, _, streamer = graph.sequential(
+        [dk.get_model_source_node(), "Speck2fOutputEventTypeFilter",
+         "Speck2fDvsToVizConverter", "VizEventStreamer"]
+    )
+    event_type_filter.set_desired_type("speck2f::event::DvsEvent")
+
+    config_source, _ = graph.sequential(
+        [samna.BasicSourceNode_ui_event(), streamer]
+    )
+    streamer.set_streamer_endpoint(endpoint)
+    if streamer.wait_for_receiver_count() == 0:
+        raise Exception(f'connecting to visualizer on {endpoint} fails')
     return config_source
 
 
@@ -286,6 +309,28 @@ def visualize_layer(dk, layer):
         )
     ]
     visualizer_config = samna.ui.VisualizerConfiguration(plots=plots)
+    config_source.write([visualizer_config])
+    return graph, gui_process
+
+
+def visualize_raw_dvs(dk):
+    """Open a second samnagui window for the raw 128x128 DVS stream."""
+
+    streamer_endpoint = "tcp://0.0.0.0:40013"
+    gui_process = open_visualizer(0.32, 0.48, streamer_endpoint)
+    graph = samna.graph.EventFilterGraph()
+    config_source = build_raw_dvs_event_route(
+        dk, graph, streamer_endpoint
+    )
+    graph.start()
+
+    visualizer_config = samna.ui.VisualizerConfiguration(
+        plots=[
+            samna.ui.ActivityPlotConfiguration(
+                128, 128, "Raw DVS", [0, 0, 1, 1]
+            )
+        ]
+    )
     config_source.write([visualizer_config])
     return graph, gui_process
 
@@ -587,7 +632,8 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
 
     # ``monitor_enable`` emits pre-processed Layer-13 Spike events, whereas
     # ``raw_monitor_enable`` emits the sensor's original DvsEvent stream.
-    # Keep the ordinary Demo/DS path unchanged and let recorders opt in.
+    # Raw DVS plus Layer-4 monitoring is a high-throughput combination, so use
+    # the chip's second output channel only for that opt-in recorder mode.
     config.dvs_layer.monitor_enable = False
     if hasattr(config.dvs_layer, "raw_monitor_enable"):
         config.dvs_layer.raw_monitor_enable = bool(raw_dvs_monitor)
@@ -595,6 +641,8 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
         raise RuntimeError(
             "This samna version does not expose dvs_layer.raw_monitor_enable"
         )
+    if hasattr(config.factory_config, "monitor_dual_channel"):
+        config.factory_config.monitor_dual_channel = bool(raw_dvs_monitor)
     config.dvs_layer.pass_sensor_events = True
     config.dvs_layer.mirror.x = True
 

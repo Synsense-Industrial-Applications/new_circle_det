@@ -15,6 +15,8 @@ Run:
 
 At startup, enter a subfolder name to save this run under
 ``recordings/<name>/``. Press Enter to save directly under ``recordings/``.
+Samnagui always opens both the Layer-4 view and a live raw-DVS view. The DVS
+choice controls CSV saving only; it does not disable the live DVS preview.
 
 Controls:
     R: start/stop recording.  Each new start creates a new CSV file.
@@ -49,6 +51,7 @@ from Demo import (
     layer_4,
     open_speck2f_dev_kit,
     visualize_layer,
+    visualize_raw_dvs,
 )
 
 
@@ -62,6 +65,7 @@ READ_TIMEOUT_MS = 10
 FLUSH_EVERY_EVENTS = 4096
 FLUSH_INTERVAL_SEC = 1.0
 STATUS_INTERVAL_SEC = 1.0
+RECORDER_INTERFACE_CLOCK_HZ = 25_000_000
 CSV_COLUMNS = ("x", "y", "feature", "timestamp")
 DVS_CSV_COLUMNS = ("x", "y", "polarity", "timestamp")
 DVS_IMAGE_SIZE = 128
@@ -121,7 +125,7 @@ def choose_dvs_recording() -> bool:
 
     while True:
         try:
-            answer = input("Also save raw DVS events? [y/N]: ").strip().lower()
+            answer = input("Save raw DVS events to CSV? [y/N]: ").strip().lower()
         except EOFError:
             print("No interactive input; raw DVS recording is disabled.")
             return False
@@ -398,7 +402,9 @@ def record_layer4(record_dvs=False):
 
     output_dir = choose_recording_directory()
     print("Configuring the SNN/CNN pipeline from Demo.py...")
-    configure_cnn_pipeline(raw_dvs_monitor=record_dvs)
+    # Raw monitoring is always required by the live DVS samnagui window.
+    # ``record_dvs`` controls only whether those events are also saved to CSV.
+    configure_cnn_pipeline(raw_dvs_monitor=True)
 
     print("Opening Speck2f device...")
     dev_kit = open_speck2f_dev_kit()
@@ -412,12 +418,34 @@ def record_layer4(record_dvs=False):
 
     # Keep the route alive for the entire recording session.
     device_input_route = samna.graph.source_to(dev_kit.get_model_sink_node())
-    event_buffer = samna.graph.sink_from(dev_kit.get_model_source_node())
+    recording_output_graph = None
+    if record_dvs:
+        # The recorder needs both Spike and DvsEvent variants in this mode.
+        event_buffer = samna.graph.sink_from(dev_kit.get_model_source_node())
+    else:
+        # Raw DVS still goes to samnagui, but do not send that high-rate stream
+        # through Python when no DVS CSV is requested.
+        recording_output_graph = samna.graph.EventFilterGraph()
+        (
+            _, event_type_filter, layer_filter, event_buffer,
+        ) = recording_output_graph.sequential(
+            [dev_kit.get_model_source_node(),
+             "Speck2fOutputEventTypeFilter", "Speck2fOutputMemberSelect",
+             samna.BasicSinkNode_speck2f_event_output_event()]
+        )
+        event_type_filter.set_desired_type("speck2f::event::Spike")
+        layer_filter.set_white_list([layer_4], "layer")
+        recording_output_graph.start()
 
     io_module = dev_kit.get_io_module()
     io_module.set_slow_clk_rate(32)
     io_module.set_slow_clk(True)
-    io_module.set_in_out_interface_clk_rate(1_000_000)
+    # Both live views are active, so the high-throughput output path is always
+    # needed even when raw DVS events are not saved to CSV.
+    interface_clock_hz = RECORDER_INTERFACE_CLOCK_HZ
+    io_module.set_in_out_interface_clk_rate(interface_clock_hz)
+    if hasattr(io_module, "set_dual_channel_output_enable"):
+        io_module.set_dual_channel_output_enable(True)
     dev_kit.get_power_module().set_vdd_io(3.3)
 
     stopwatch = dev_kit.get_stop_watch()
@@ -425,7 +453,9 @@ def record_layer4(record_dvs=False):
     stopwatch.start()
 
     print("Opening samnagui Layer-4 activity view...")
-    viz_graph, viz_gui = visualize_layer(dev_kit, layer_4)
+    visualizers = [visualize_layer(dev_kit, layer_4)]
+    print("Opening samnagui raw-DVS activity view...")
+    visualizers.append(visualize_raw_dvs(dev_kit))
 
     # Discard configuration/start-up events before beginning the data file.
     event_buffer.get_events()
@@ -445,8 +475,11 @@ def record_layer4(record_dvs=False):
     print("CSV columns: x,y,feature,timestamp")
     print(f"Expected Layer-4 features: 0..{LAYER4_FEATURE_COUNT - 1}")
     print(f"Raw DVS CSV output: {'ON' if record_dvs else 'OFF'}")
+    print("Raw DVS samnagui preview: ON")
+    print(f"Output interface clock: {interface_clock_hz / 1_000_000:g} MHz")
     if record_dvs:
         print("DVS CSV columns: x,y,polarity,timestamp")
+    print("Dual-channel monitor output: ON")
     print("Press R to start/stop recording; press Q to quit.")
 
     try:
@@ -533,7 +566,7 @@ def record_layer4(record_dvs=False):
                         rate_text += f"dvs_input={dvs_input_rate:,.1f} event/s  "
                     print(
                         f"[{state}] {rate_text}"
-                        f"seen={total_layer4_seen:,}  raw={total_raw:,}",
+                        f"seen={total_layer4_seen:,}  received={total_raw:,}",
                         flush=True,
                     )
                     previous_status_seen = total_layer4_seen
@@ -550,15 +583,21 @@ def record_layer4(record_dvs=False):
             input_graph.stop()
         except Exception:
             pass
-        try:
-            viz_graph.stop()
-        except Exception:
-            pass
-        try:
-            viz_gui.terminate()
-            viz_gui.join(timeout=2)
-        except Exception:
-            pass
+        if recording_output_graph is not None:
+            try:
+                recording_output_graph.stop()
+            except Exception:
+                pass
+        for viz_graph, viz_gui in reversed(visualizers):
+            try:
+                viz_graph.stop()
+            except Exception:
+                pass
+            try:
+                viz_gui.terminate()
+                viz_gui.join(timeout=2)
+            except Exception:
+                pass
         # Keep the route reference alive until graph shutdown.
         _ = device_input_route
 

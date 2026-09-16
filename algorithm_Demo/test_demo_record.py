@@ -36,6 +36,7 @@ def load_recorder_module():
     fake_demo.layer_4 = 2
     fake_demo.open_speck2f_dev_kit = lambda: None
     fake_demo.visualize_layer = lambda *_args: (None, None)
+    fake_demo.visualize_raw_dvs = lambda *_args: (None, None)
 
     spec = importlib.util.spec_from_file_location(
         "Demo_record_under_test", SCRIPT_DIR / "Demo_record.py"
@@ -123,12 +124,31 @@ class DemoRecordTests(unittest.TestCase):
             "config.dvs_layer.raw_monitor_enable = bool(raw_dvs_monitor)",
             source,
         )
+        self.assertIn(
+            "config.factory_config.monitor_dual_channel = bool(raw_dvs_monitor)",
+            source,
+        )
         recorder_source = (SCRIPT_DIR / "Demo_record.py").read_text(
             encoding="utf-8"
         )
         self.assertIn(
-            "configure_cnn_pipeline(raw_dvs_monitor=record_dvs)",
+            "configure_cnn_pipeline(raw_dvs_monitor=True)",
             recorder_source,
+        )
+        self.assertIn("visualize_raw_dvs(dev_kit)", recorder_source)
+
+    def test_recorder_uses_the_high_bandwidth_interface_clock(self):
+        self.assertEqual(self.recorder.RECORDER_INTERFACE_CLOCK_HZ, 25_000_000)
+
+    def test_visualization_routes_filter_event_types_before_conversion(self):
+        source = (SCRIPT_DIR / "Demo.py").read_text(encoding="utf-8")
+        self.assertIn(
+            'event_type_filter.set_desired_type("speck2f::event::Spike")',
+            source,
+        )
+        self.assertIn(
+            'event_type_filter.set_desired_type("speck2f::event::DvsEvent")',
+            source,
         )
 
 
