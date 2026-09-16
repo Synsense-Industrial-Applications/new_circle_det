@@ -510,22 +510,39 @@ def configure_cnn_pipeline():
     #     monitor_enable=True,
     # )
     weights = np.zeros((8, 8, 5, 5), dtype=np.int8)
-    kernel_anti = np.array([
-        [1, 0, 0, 0, 0],
-        [0, 1, 0, 0, 0],
-        [0, 0, 2, 0, 0],
-        [0, 0, 0, 1, 0],
-        [0, 0, 0, 0, 1],
-    ], dtype=np.int8)
+    tangent = True
+    if tangent==True:
+        kernel_anti = np.array([
+            [1, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 2, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1],
+        ], dtype=np.int8)
 
-    kernel_main = np.array([
-        [0, 0, 0, 0, 1],
-        [0, 0, 0, 1, 0],
-        [0, 0, 2, 0, 0],
-        [0, 1, 0, 0, 0],
-        [1, 0, 0, 0, 0],
-    ], dtype=np.int8)
+        kernel_main = np.array([
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 1, 0],
+            [0, 0, 2, 0, 0],
+            [0, 1, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+        ], dtype=np.int8)
+    else:
+        kernel_main = np.array([
+            [1, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 2, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1],
+        ], dtype=np.int8)
 
+        kernel_anti = np.array([
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 1, 0],
+            [0, 0, 2, 0, 0],
+            [0, 1, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+        ], dtype=np.int8)
     # 右下、左上：空间方向都是 \
     weights[0, 0] = kernel_main
     weights[3, 1] = kernel_main
