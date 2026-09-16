@@ -1,13 +1,17 @@
-"""Record raw Speck2f CNN Layer-4 events without running circle detection.
+"""Record Speck2f Layer-4 events and, optionally, raw DVS events.
 
 The SNN/CNN configuration is imported from the current ``Demo.py`` so this
 recorder always uses the same network that is being tested.  Every 16-channel
 Layer-4 event is written directly to CSV as ``x,y,feature,timestamp``; no
 coordinate decoding, circle fitting, confidence scoring, tracking, or hit
-detection is performed.
+detection is performed. Raw DVS recording is disabled by default. When it is
+enabled, a second CSV with ``x,y,polarity,timestamp`` is opened and closed at
+exactly the same R-key boundaries as the Layer-4 CSV.
 
 Run:
     python Demo_record.py
+    python Demo_record.py --record-dvs
+    python Demo_record.py --no-record-dvs
 
 At startup, enter a subfolder name to save this run under
 ``recordings/<name>/``. Press Enter to save directly under ``recordings/``.
@@ -18,6 +22,7 @@ Controls:
     Ctrl+C: quit the program safely.
 """
 
+import argparse
 import csv
 from datetime import datetime
 import os
@@ -58,6 +63,8 @@ FLUSH_EVERY_EVENTS = 4096
 FLUSH_INTERVAL_SEC = 1.0
 STATUS_INTERVAL_SEC = 1.0
 CSV_COLUMNS = ("x", "y", "feature", "timestamp")
+DVS_CSV_COLUMNS = ("x", "y", "polarity", "timestamp")
+DVS_IMAGE_SIZE = 128
 START_STOP_KEY = "r"
 QUIT_KEY = "q"
 INVALID_FOLDER_CHARACTERS = frozenset('<>:"/\\|?*')
@@ -109,10 +116,27 @@ def choose_recording_directory() -> Path:
         return output_dir
 
 
-def _new_output_path(output_dir: Path) -> Path:
+def choose_dvs_recording() -> bool:
+    """Ask whether to save raw DVS events; Enter and EOF both mean no."""
+
+    while True:
+        try:
+            answer = input("Also save raw DVS events? [y/N]: ").strip().lower()
+        except EOFError:
+            print("No interactive input; raw DVS recording is disabled.")
+            return False
+        if answer in ("", "n", "no"):
+            return False
+        if answer in ("y", "yes"):
+            return True
+        print("Please enter y or n. Press Enter for the default (no).")
+
+
+def _new_output_path(output_dir: Path, prefix="layer4", stamp=None) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    return output_dir / f"layer4_{stamp}.csv"
+    if stamp is None:
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    return output_dir / f"{prefix}_{stamp}.csv"
 
 
 def _event_row(event):
@@ -128,6 +152,41 @@ def _event_row(event):
             f"got {feature}"
         )
     return row
+
+
+def _first_event_attribute(event, *names):
+    for name in names:
+        if hasattr(event, name):
+            return getattr(event, name)
+    raise AttributeError(
+        f"{type(event).__name__} has none of the fields {', '.join(names)}"
+    )
+
+
+def _dvs_event_row(event):
+    """Return one raw DVS event across supported samna field-name variants."""
+
+    x = int(_first_event_attribute(event, "x", "col"))
+    y = int(_first_event_attribute(event, "y", "row"))
+    polarity = int(
+        _first_event_attribute(event, "p", "polarity", "channel", "feature")
+    )
+    timestamp = int(_first_event_attribute(event, "timestamp"))
+    if not 0 <= x < DVS_IMAGE_SIZE or not 0 <= y < DVS_IMAGE_SIZE:
+        raise ValueError(f"raw DVS coordinates out of range: ({x}, {y})")
+    if polarity not in (0, 1):
+        raise ValueError(f"raw DVS polarity must be 0 or 1, got {polarity}")
+    return x, y, polarity, timestamp
+
+
+def _is_raw_dvs_event(event):
+    """Identify ``samna.speck2f.event.DvsEvent`` without assuming one version."""
+
+    event_namespace = getattr(getattr(samna, "speck2f", None), "event", None)
+    dvs_event_type = getattr(event_namespace, "DvsEvent", None)
+    if dvs_event_type is not None and isinstance(event, dvs_event_type):
+        return True
+    return type(event).__name__.lower().endswith("dvsevent")
 
 
 class ConsoleKeyReader:
@@ -184,18 +243,24 @@ class ConsoleKeyReader:
 
 
 class CsvRecordingSession:
-    """Own one CSV file and its per-recording counters."""
+    """Own one Layer-4 CSV and an optional, synchronized raw-DVS CSV."""
 
-    def __init__(self, output_dir):
+    def __init__(self, output_dir, record_dvs=False):
         self.output_dir = Path(output_dir)
+        self.record_dvs = bool(record_dvs)
         self.csv_file = None
         self.writer = None
         self.output_path = None
+        self.dvs_csv_file = None
+        self.dvs_writer = None
+        self.dvs_output_path = None
         self.started = 0.0
         self.last_flush = 0.0
         self.events_since_flush = 0
         self.event_count = 0
         self.invalid_count = 0
+        self.dvs_event_count = 0
+        self.dvs_invalid_count = 0
         self.feature_counts = [0] * LAYER4_FEATURE_COUNT
         self.saved_paths = []
 
@@ -206,34 +271,66 @@ class CsvRecordingSession:
     def start(self):
         if self.active:
             return
-        self.output_path = _new_output_path(self.output_dir)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        self.output_path = _new_output_path(self.output_dir, "layer4", stamp)
+        self.dvs_output_path = (
+            _new_output_path(self.output_dir, "dvs", stamp)
+            if self.record_dvs
+            else None
+        )
         self.csv_file = self.output_path.open(
             "w", newline="", encoding="utf-8", buffering=1024 * 1024
         )
         self.writer = csv.writer(self.csv_file)
         self.writer.writerow(CSV_COLUMNS)
         self.csv_file.flush()
+        if self.dvs_output_path is not None:
+            try:
+                self.dvs_csv_file = self.dvs_output_path.open(
+                    "w", newline="", encoding="utf-8", buffering=1024 * 1024
+                )
+            except OSError:
+                self.csv_file.close()
+                self.csv_file = None
+                self.writer = None
+                self.output_path = None
+                self.dvs_output_path = None
+                raise
+            self.dvs_writer = csv.writer(self.dvs_csv_file)
+            self.dvs_writer.writerow(DVS_CSV_COLUMNS)
+            self.dvs_csv_file.flush()
         self.started = time.monotonic()
         self.last_flush = self.started
         self.events_since_flush = 0
         self.event_count = 0
         self.invalid_count = 0
+        self.dvs_event_count = 0
+        self.dvs_invalid_count = 0
         self.feature_counts = [0] * LAYER4_FEATURE_COUNT
         print("\n[RECORDING STARTED]")
-        print(self.output_path.resolve())
+        print(f"Layer-4 CSV: {self.output_path.resolve()}")
+        if self.dvs_output_path is not None:
+            print(f"Raw DVS CSV: {self.dvs_output_path.resolve()}")
 
-    def write(self, rows, invalid_count=0):
+    def write(self, rows, dvs_rows=(), invalid_count=0, dvs_invalid_count=0):
         if not self.active:
             return
         self.invalid_count += invalid_count
-        if not rows:
-            return
-        self.writer.writerows(rows)
-        for row in rows:
-            self.feature_counts[row[2]] += 1
-        written = len(rows)
-        self.event_count += written
-        self.events_since_flush += written
+        self.dvs_invalid_count += dvs_invalid_count
+        if rows:
+            self.writer.writerows(rows)
+            for row in rows:
+                self.feature_counts[row[2]] += 1
+            written = len(rows)
+            self.event_count += written
+            self.events_since_flush += written
+        if dvs_rows:
+            if self.dvs_writer is None:
+                raise RuntimeError("received DVS rows while raw DVS recording is off")
+            self.dvs_writer.writerows(dvs_rows)
+            written = len(dvs_rows)
+            self.dvs_event_count += written
+            self.events_since_flush += written
 
     def flush_if_due(self, now):
         if not self.active:
@@ -243,6 +340,8 @@ class CsvRecordingSession:
             or now - self.last_flush >= FLUSH_INTERVAL_SEC
         ):
             self.csv_file.flush()
+            if self.dvs_csv_file is not None:
+                self.dvs_csv_file.flush()
             self.events_since_flush = 0
             self.last_flush = now
 
@@ -251,11 +350,18 @@ class CsvRecordingSession:
             return None
         elapsed = max(time.monotonic() - self.started, 1e-9)
         output_path = self.output_path
+        dvs_output_path = self.dvs_output_path
         try:
             self.csv_file.flush()
+            if self.dvs_csv_file is not None:
+                self.dvs_csv_file.flush()
         finally:
             self.csv_file.close()
+            if self.dvs_csv_file is not None:
+                self.dvs_csv_file.close()
         self.saved_paths.append(output_path)
+        if dvs_output_path is not None:
+            self.saved_paths.append(dvs_output_path)
         print("\n[RECORDING STOPPED]")
         print(
             f"Saved {self.event_count:,} Layer-4 events in {elapsed:.3f}s "
@@ -269,20 +375,30 @@ class CsvRecordingSession:
                 for feature, count in enumerate(self.feature_counts)
             )
         )
-        print(f"CSV: {output_path.resolve()}")
+        print(f"Layer-4 CSV: {output_path.resolve()}")
+        if dvs_output_path is not None:
+            print(
+                f"Saved {self.dvs_event_count:,} raw DVS events "
+                f"({self.dvs_event_count / elapsed:,.1f} event/s); "
+                f"invalid={self.dvs_invalid_count:,}"
+            )
+            print(f"DVS CSV: {dvs_output_path.resolve()}")
         print("Press R to create a new recording, or Q to quit.")
         self.csv_file = None
         self.writer = None
         self.output_path = None
+        self.dvs_csv_file = None
+        self.dvs_writer = None
+        self.dvs_output_path = None
         return output_path
 
 
-def record_layer4():
-    """Configure the board and record any number of Layer-4 CSV sessions."""
+def record_layer4(record_dvs=False):
+    """Record Layer-4 sessions and optional synchronized raw-DVS sessions."""
 
     output_dir = choose_recording_directory()
     print("Configuring the SNN/CNN pipeline from Demo.py...")
-    configure_cnn_pipeline()
+    configure_cnn_pipeline(raw_dvs_monitor=record_dvs)
 
     print("Opening Speck2f device...")
     dev_kit = open_speck2f_dev_kit()
@@ -316,9 +432,11 @@ def record_layer4():
 
     total_raw = 0
     total_layer4_seen = 0
+    total_dvs_seen = 0
     last_status = time.monotonic()
     previous_status_seen = 0
-    session = CsvRecordingSession(output_dir)
+    previous_dvs_status_seen = 0
+    session = CsvRecordingSession(output_dir, record_dvs=record_dvs)
     keyboard = ConsoleKeyReader()
 
     print(
@@ -326,6 +444,9 @@ def record_layer4():
     )
     print("CSV columns: x,y,feature,timestamp")
     print(f"Expected Layer-4 features: 0..{LAYER4_FEATURE_COUNT - 1}")
+    print(f"Raw DVS CSV output: {'ON' if record_dvs else 'OFF'}")
+    if record_dvs:
+        print("DVS CSV columns: x,y,polarity,timestamp")
     print("Press R to start/stop recording; press Q to quit.")
 
     try:
@@ -355,19 +476,33 @@ def record_layer4():
                 total_raw += len(events)
 
                 rows = []
+                dvs_rows = []
                 invalid_in_batch = 0
+                dvs_invalid_in_batch = 0
                 for event in events:
-                    if getattr(event, "layer", None) != layer_4:
-                        continue
-                    total_layer4_seen += 1
-                    if not session.active:
-                        continue
-                    try:
-                        rows.append(_event_row(event))
-                    except (AttributeError, TypeError, ValueError):
-                        invalid_in_batch += 1
+                    if getattr(event, "layer", None) == layer_4:
+                        total_layer4_seen += 1
+                        if not session.active:
+                            continue
+                        try:
+                            rows.append(_event_row(event))
+                        except (AttributeError, TypeError, ValueError):
+                            invalid_in_batch += 1
+                    elif record_dvs and _is_raw_dvs_event(event):
+                        total_dvs_seen += 1
+                        if not session.active:
+                            continue
+                        try:
+                            dvs_rows.append(_dvs_event_row(event))
+                        except (AttributeError, TypeError, ValueError):
+                            dvs_invalid_in_batch += 1
 
-                session.write(rows, invalid_in_batch)
+                session.write(
+                    rows,
+                    dvs_rows,
+                    invalid_count=invalid_in_batch,
+                    dvs_invalid_count=dvs_invalid_in_batch,
+                )
 
                 now = time.monotonic()
                 session.flush_if_due(now)
@@ -376,6 +511,9 @@ def record_layer4():
                     input_rate = (
                         total_layer4_seen - previous_status_seen
                     ) / interval
+                    dvs_input_rate = (
+                        total_dvs_seen - previous_dvs_status_seen
+                    ) / interval
                     if session.active:
                         state = (
                             f"RECORDING file_events={session.event_count:,} "
@@ -383,14 +521,23 @@ def record_layer4():
                             f"{sum(count > 0 for count in session.feature_counts)}/"
                             f"{LAYER4_FEATURE_COUNT} invalid={session.invalid_count:,}"
                         )
+                        if record_dvs:
+                            state += (
+                                f" dvs_events={session.dvs_event_count:,} "
+                                f"dvs_invalid={session.dvs_invalid_count:,}"
+                            )
                     else:
                         state = "IDLE"
+                    rate_text = f"layer4_input={input_rate:,.1f} event/s  "
+                    if record_dvs:
+                        rate_text += f"dvs_input={dvs_input_rate:,.1f} event/s  "
                     print(
-                        f"[{state}] layer4_input={input_rate:,.1f} event/s  "
+                        f"[{state}] {rate_text}"
                         f"seen={total_layer4_seen:,}  raw={total_raw:,}",
                         flush=True,
                     )
                     previous_status_seen = total_layer4_seen
+                    previous_dvs_status_seen = total_dvs_seen
                     last_status = now
 
         except KeyboardInterrupt:
@@ -421,8 +568,33 @@ def record_layer4():
     return tuple(session.saved_paths)
 
 
-def main():
-    record_layer4()
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Record Layer-4 CSV and optionally a synchronized raw-DVS CSV"
+    )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--record-dvs",
+        dest="record_dvs",
+        action="store_true",
+        help="save raw DVS events to a second CSV",
+    )
+    group.add_argument(
+        "--no-record-dvs",
+        dest="record_dvs",
+        action="store_false",
+        help="do not save raw DVS events and skip the startup question",
+    )
+    parser.set_defaults(record_dvs=None)
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
+    record_dvs = (
+        choose_dvs_recording() if args.record_dvs is None else args.record_dvs
+    )
+    record_layer4(record_dvs=record_dvs)
 
 
 if __name__ == "__main__":

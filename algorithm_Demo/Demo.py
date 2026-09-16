@@ -354,8 +354,8 @@ def create_layer(layer_name, layer, padding, stride, kernel_size,
             config.cnn_layers[layer].destinations[1].feature_shift = feature_shift_1
 
 
-def configure_cnn_pipeline():
-    """构建完整的 CNN 流水线配置."""
+def configure_cnn_pipeline(raw_dvs_monitor=False):
+    """构建 CNN 流水线，并按需开启原始 DVS 事件监控。"""
     config.dvs_layer.destinations[0].layer = layer_0_0
     config.dvs_layer.destinations[0].enable = 1
     config.dvs_layer.destinations[1].layer = layer_0_1
@@ -585,7 +585,16 @@ def configure_cnn_pipeline():
         leak_enable=True, bias=-3,
     )
 
+    # ``monitor_enable`` emits pre-processed Layer-13 Spike events, whereas
+    # ``raw_monitor_enable`` emits the sensor's original DvsEvent stream.
+    # Keep the ordinary Demo/DS path unchanged and let recorders opt in.
     config.dvs_layer.monitor_enable = False
+    if hasattr(config.dvs_layer, "raw_monitor_enable"):
+        config.dvs_layer.raw_monitor_enable = bool(raw_dvs_monitor)
+    elif raw_dvs_monitor:
+        raise RuntimeError(
+            "This samna version does not expose dvs_layer.raw_monitor_enable"
+        )
     config.dvs_layer.pass_sensor_events = True
     config.dvs_layer.mirror.x = True
 
