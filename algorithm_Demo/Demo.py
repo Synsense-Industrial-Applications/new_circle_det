@@ -510,7 +510,7 @@ def configure_cnn_pipeline():
     #     monitor_enable=True,
     # )
     weights = np.zeros((8, 8, 5, 5), dtype=np.int8)
-    tangent = True
+    tangent = False
     if tangent==True:
         kernel_anti = np.array([
             [1, 0, 0, 0, 0],
