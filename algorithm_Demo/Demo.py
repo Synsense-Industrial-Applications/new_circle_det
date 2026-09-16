@@ -555,6 +555,18 @@ def configure_cnn_pipeline():
     weights[5, 6] = kernel_anti
     weights[6, 7] = kernel_anti
 
+        # 右下、左上：空间方向都是 \
+    weights[0+8, 0] = kernel_anti
+    weights[3+8, 1] = kernel_anti
+    weights[4+8, 2] = kernel_anti
+    weights[7+8, 3] = kernel_anti
+
+    # 左下、右上：空间方向都是 /
+    weights[1+8, 4] = kernel_main
+    weights[2+8, 5] = kernel_main
+    weights[5+8, 6] = kernel_main
+    weights[6+8, 7] = kernel_main
+
     create_layer(
         layer_name="layer_4", layer=layer_4,
         padding=2, stride=1, kernel_size=5,
