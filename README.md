@@ -152,7 +152,8 @@ python -m pip install -r requirements.txt
 
 ## 文件说明
 
-- `four_region_flow.py`：与参考播放器一致的64×64×8到128×128四区域解码。
+- `four_region_flow.py`：与参考播放器一致的64×64×16到128×128四区域解码；
+  两组8通道保留相同的光流方向与子像素坐标，第二组使用互补空间卷积核。
 - `circle_detection/adaptive_detector.py`：固定事件数、三点圆假设和连续跟踪检测器。
 - `circle_detection/xiaoiron_confidence.py`：独立新置信度函数与所有可调参数。
 - `XIAOIRON_CONFIDENCE.md`：新公式、扇区规则、调参方法和验证说明。

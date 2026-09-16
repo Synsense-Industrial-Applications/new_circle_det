@@ -21,10 +21,21 @@ from circle_detection import (
     FlowEvent,
 )
 
+try:
+    from .layer4_layout import (
+        FEATURE_TO_DIRECTION,
+        decode_layer4_address,
+    )
+except ImportError:  # Direct execution/import from algorithm_Demo/.
+    from layer4_layout import (
+        FEATURE_TO_DIRECTION,
+        decode_layer4_address,
+    )
 
-# Layer-4 feature -> four diagonal optical-flow directions.  This is the same
-# mapping used by four_region_flow.py and the offline latest-method player.
-FEATURE_TO_DIRECTION = (0, 1, 1, 0, 2, 3, 3, 2)
+
+# Layer-4 feature -> four diagonal optical-flow directions.  The second bank
+# of eight features repeats the direction/address mapping while using the
+# complementary spatial kernel configured in Demo.py.
 DIRECTION_ANGLES_DEG = {0: 45.0, 1: 135.0, 2: 225.0, 3: 315.0}
 
 
@@ -239,18 +250,10 @@ def decode_layer4_event(
     feature: int,
     timestamp: float,
 ) -> FlowEvent:
-    """Decode one raw 64x64x8 Layer-4 event to ``(x128, y128, c, t)``."""
+    """Decode one raw 64x64x16 Layer-4 event to ``(x128, y128, c, t)``."""
 
-    x64 = int(x64)
-    y64 = int(y64)
     feature = int(feature)
-    if not 0 <= x64 < 64 or not 0 <= y64 < 64:
-        raise ValueError(f"Layer-4 coordinates out of range: ({x64}, {y64})")
-    if not 0 <= feature < len(FEATURE_TO_DIRECTION):
-        raise ValueError(f"Layer-4 feature out of range: {feature}")
-    feature_mod4 = feature % 4
-    x128 = 2 * x64 + feature_mod4 // 2
-    y128 = 2 * y64 + feature_mod4 % 2
+    x128, y128 = decode_layer4_address(x64, y64, feature)
     direction = FEATURE_TO_DIRECTION[feature]
     return FlowEvent(float(x128), float(y128), direction, float(timestamp))
 

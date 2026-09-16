@@ -6,7 +6,7 @@ Python standard-library Tk interface.
 
 Features:
 * load raw ``x,y,feature,timestamp`` Layer-4 CSV files;
-* decode 64x64x8 addresses to the 128x128 four-direction view;
+* decode current 64x64x16 addresses to the 128x128 four-direction view;
 * timestamp-accurate playback from 0.01x to 20x;
 * play/pause, restart, previous/next event and exact event-number jump;
 * draggable progress, loop range, event-density timeline;
@@ -54,9 +54,10 @@ FLOW_DIRECTION_RGB = np.asarray(
     dtype=np.float32,
 )
 FEATURE_TO_DIRECTION = np.asarray(
-    (0, 1, 1, 0, 2, 3, 3, 2),
+    (0, 1, 1, 0, 2, 3, 3, 2) * 2,
     dtype=np.int8,
 )
+LAYER4_FEATURE_COUNT = len(FEATURE_TO_DIRECTION)
 ARROW_VECTORS = (
     (1, 1),
     (-1, 1),
@@ -150,8 +151,10 @@ def load_event_csv(path):
         features = np.asarray(features, dtype=np.int16)
         if len(features) != len(timestamps):
             raise ValueError("feature must be present on every CSV row")
-        if np.any((features < 0) | (features > 7)):
-            raise ValueError("Layer-4 feature must be in 0..7")
+        if np.any((features < 0) | (features >= LAYER4_FEATURE_COUNT)):
+            raise ValueError(
+                f"Layer-4 feature must be in 0..{LAYER4_FEATURE_COUNT - 1}"
+            )
         directions = FEATURE_TO_DIRECTION[features]
 
         if (
@@ -163,7 +166,7 @@ def load_event_csv(path):
             feature_mod4 = features.astype(np.int32) % 4
             xs = (raw_x * 2 + (feature_mod4 // 2) % 2).astype(np.int16)
             ys = (raw_y * 2 + feature_mod4 % 2).astype(np.int16)
-            source_shape = "64x64x8 -> 128x128 four-direction flow"
+            source_shape = "64x64x16 -> 128x128 four-direction flow"
 
     invalid = (xs < 0) | (xs >= IMAGE_SIZE) | (ys < 0) | (ys >= IMAGE_SIZE)
     if np.any(invalid):
@@ -1063,7 +1066,7 @@ class EventStreamPlayer:
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
-        description="Lightweight 128x128 / 64x64x8 Layer-4 event player"
+        description="Lightweight 128x128 / 64x64x16 Layer-4 event player"
     )
     parser.add_argument("event_csv", nargs="?", help="CSV to open at startup")
     parser.add_argument("--speed", type=float, default=1.0)

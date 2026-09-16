@@ -2,8 +2,8 @@
 """Decode the 13-point four-region Layer-4 event representation.
 
 This module deliberately mirrors ``event_stream_player.py``. The source
-address is 64x64 and feature 0..7 contains both a 2x2 sub-pixel address and a
-four-region diagonal flow code.
+address is 64x64 and feature 0..15 contains two spatial-kernel banks.  Both
+banks retain the original 2x2 sub-pixel address and four-direction flow code.
 """
 
 from __future__ import annotations
@@ -16,7 +16,11 @@ import numpy as np
 
 
 IMAGE_SIZE = 128
-FEATURE_TO_DIRECTION = np.asarray([0, 1, 1, 0, 2, 3, 3, 2], dtype=np.int8)
+FEATURE_TO_DIRECTION = np.asarray(
+    [0, 1, 1, 0, 2, 3, 3, 2] * 2,
+    dtype=np.int8,
+)
+LAYER4_FEATURE_COUNT = len(FEATURE_TO_DIRECTION)
 DIRECTION_NAMES = ("down-right", "down-left", "up-left", "up-right")
 DIRECTION_SYMBOLS = ("↘", "↙", "↖", "↗")
 DIRECTION_ANGLES_DEG = {0: 45.0, 1: 135.0, 2: 225.0, 3: 315.0}
@@ -114,8 +118,10 @@ def load_flow_csv(path: Path) -> FlowData:
     timestamp_us = np.asarray(timestamps, dtype=np.int64)
     layer = np.asarray(layers, dtype=np.int16)
 
-    if np.any((feature < 0) | (feature > 7)):
-        raise ValueError(f"{path.name}: feature must be in 0..7")
+    if np.any((feature < 0) | (feature >= LAYER4_FEATURE_COUNT)):
+        raise ValueError(
+            f"{path.name}: feature must be in 0..{LAYER4_FEATURE_COUNT - 1}"
+        )
     if np.any((x64 < 0) | (x64 >= 64) | (y64 < 0) | (y64 >= 64)):
         raise ValueError(f"{path.name}: expected 64x64 coordinates in 0..63")
 

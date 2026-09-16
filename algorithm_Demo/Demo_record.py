@@ -1,10 +1,10 @@
 """Record raw Speck2f CNN Layer-4 events without running circle detection.
 
 The SNN/CNN configuration is imported from the current ``Demo.py`` so this
-recorder always uses the same network that is being tested.  Every Layer-4
-event is written directly to CSV as ``x,y,feature,timestamp``; no coordinate
-decoding, circle fitting, confidence scoring, tracking, or hit detection is
-performed.
+recorder always uses the same network that is being tested.  Every 16-channel
+Layer-4 event is written directly to CSV as ``x,y,feature,timestamp``; no
+coordinate decoding, circle fitting, confidence scoring, tracking, or hit
+detection is performed.
 
 Run:
     python Demo_record.py
@@ -26,6 +26,8 @@ import sys
 import time
 
 import samna
+
+from layer4_layout import LAYER4_FEATURE_COUNT, LAYER4_SOURCE_SIZE
 
 if os.name == "nt":
     import msvcrt
@@ -114,9 +116,18 @@ def _new_output_path(output_dir: Path) -> Path:
 
 
 def _event_row(event):
-    """Return one untouched Layer-4 output event in the legacy CSV format."""
+    """Validate and return one raw 64x64x16 Layer-4 event."""
 
-    return tuple(int(getattr(event, name)) for name in CSV_COLUMNS)
+    row = tuple(int(getattr(event, name)) for name in CSV_COLUMNS)
+    x, y, feature, _timestamp = row
+    if not 0 <= x < LAYER4_SOURCE_SIZE or not 0 <= y < LAYER4_SOURCE_SIZE:
+        raise ValueError(f"Layer-4 coordinates out of range: ({x}, {y})")
+    if not 0 <= feature < LAYER4_FEATURE_COUNT:
+        raise ValueError(
+            f"Layer-4 feature must be in 0..{LAYER4_FEATURE_COUNT - 1}, "
+            f"got {feature}"
+        )
+    return row
 
 
 class ConsoleKeyReader:
@@ -185,6 +196,7 @@ class CsvRecordingSession:
         self.events_since_flush = 0
         self.event_count = 0
         self.invalid_count = 0
+        self.feature_counts = [0] * LAYER4_FEATURE_COUNT
         self.saved_paths = []
 
     @property
@@ -206,6 +218,7 @@ class CsvRecordingSession:
         self.events_since_flush = 0
         self.event_count = 0
         self.invalid_count = 0
+        self.feature_counts = [0] * LAYER4_FEATURE_COUNT
         print("\n[RECORDING STARTED]")
         print(self.output_path.resolve())
 
@@ -216,6 +229,8 @@ class CsvRecordingSession:
         if not rows:
             return
         self.writer.writerows(rows)
+        for row in rows:
+            self.feature_counts[row[2]] += 1
         written = len(rows)
         self.event_count += written
         self.events_since_flush += written
@@ -246,6 +261,13 @@ class CsvRecordingSession:
             f"Saved {self.event_count:,} Layer-4 events in {elapsed:.3f}s "
             f"({self.event_count / elapsed:,.1f} event/s); "
             f"invalid={self.invalid_count:,}"
+        )
+        print(
+            "Feature counts: "
+            + ", ".join(
+                f"{feature}={count:,}"
+                for feature, count in enumerate(self.feature_counts)
+            )
         )
         print(f"CSV: {output_path.resolve()}")
         print("Press R to create a new recording, or Q to quit.")
@@ -303,6 +325,7 @@ def record_layer4():
         f"Logical Layer 4 is ready (hardware layer={layer_4})."
     )
     print("CSV columns: x,y,feature,timestamp")
+    print(f"Expected Layer-4 features: 0..{LAYER4_FEATURE_COUNT - 1}")
     print("Press R to start/stop recording; press Q to quit.")
 
     try:
@@ -356,7 +379,9 @@ def record_layer4():
                     if session.active:
                         state = (
                             f"RECORDING file_events={session.event_count:,} "
-                            f"invalid={session.invalid_count:,}"
+                            f"features_seen="
+                            f"{sum(count > 0 for count in session.feature_counts)}/"
+                            f"{LAYER4_FEATURE_COUNT} invalid={session.invalid_count:,}"
                         )
                     else:
                         state = "IDLE"

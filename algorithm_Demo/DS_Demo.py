@@ -47,8 +47,24 @@ import traceback
 
 import numpy as np
 
+try:
+    from .layer4_layout import (
+        D_HOUGH_FEATURES,
+        FEATURE_TO_DIRECTION as LAYER4_FEATURE_TO_DIRECTION,
+        IMAGE_SIZE,
+        S_HOUGH_FEATURES,
+        decode_layer4_address as _decode_layer4_address,
+    )
+except ImportError:  # Direct execution from algorithm_Demo/.
+    from layer4_layout import (
+        D_HOUGH_FEATURES,
+        FEATURE_TO_DIRECTION as LAYER4_FEATURE_TO_DIRECTION,
+        IMAGE_SIZE,
+        S_HOUGH_FEATURES,
+        decode_layer4_address as _decode_layer4_address,
+    )
 
-IMAGE_SIZE = 128
+
 # This buffer is only for the Tk overlay.  At the recorded peak rate it covers
 # about 120 ms, longer than the default 80 ms display fade, while keeping the
 # selected best-frame snapshot inexpensive.  samnagui receives every Layer-4
@@ -63,9 +79,9 @@ DEFAULT_RELEASE_THRESHOLD = 0.10
 LAZY_SCALE_RENORMALIZE = 1e-6
 TIMESTAMP_WRAP = 1 << 32
 
-D_FAMILY = frozenset((0, 3, 4, 7))
-S_FAMILY = frozenset((1, 2, 5, 6))
-FEATURE_TO_DIRECTION = np.asarray((0, 1, 1, 0, 2, 3, 3, 2), dtype=np.int8)
+D_FAMILY = D_HOUGH_FEATURES
+S_FAMILY = S_HOUGH_FEATURES
+FEATURE_TO_DIRECTION = np.asarray(LAYER4_FEATURE_TO_DIRECTION, dtype=np.int8)
 DIRECTION_RGB = np.asarray(
     (
         (255.0, 69.0, 58.0),
@@ -181,17 +197,9 @@ class SharedRuntimeStatus:
 
 
 def decode_layer4_address(x64: int, y64: int, feature: int):
-    """Decode the current 64x64x8 Layer-4 address to one 128x128 point."""
+    """Decode the current 64x64x16 Layer-4 address to one 128x128 point."""
 
-    feature = int(feature)
-    if not 0 <= feature <= 7:
-        raise ValueError(f"Layer-4 feature must be in 0..7, got {feature}")
-    feature_mod4 = feature % 4
-    x128 = 2 * int(x64) + (feature_mod4 // 2) % 2
-    y128 = 2 * int(y64) + feature_mod4 % 2
-    if not (0 <= x128 < IMAGE_SIZE and 0 <= y128 < IMAGE_SIZE):
-        raise ValueError(f"decoded point is outside 128x128: ({x128}, {y128})")
-    return x128, y128
+    return _decode_layer4_address(x64, y64, feature)
 
 
 def _peak_from_histogram(histogram: np.ndarray, value_offset: int) -> PeakResult:

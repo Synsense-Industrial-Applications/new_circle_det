@@ -1,7 +1,7 @@
 """Speck2f hardware demo using the latest adaptive circle detector.
 
 Data flow:
-    DVS -> CNN Layer-4 (64x64x8) -> decode to (x128, y128, direction)
+    DVS -> CNN Layer-4 (64x64x16) -> decode to (x128, y128, direction)
         -> adaptive three-point circle consensus -> named output filters
 
 Only circles that pass every registered output filter are emitted.  Rejected
@@ -27,6 +27,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from circle_detection import AdaptiveDetectorConfig, XiaoironConfig  # noqa: E402
+from layer4_layout import LAYER4_FEATURE_COUNT  # noqa: E402
 from circle_runtime import (  # noqa: E402
     CircleDetectionPipeline,
     CircleFilterConfig,
@@ -509,7 +510,11 @@ def configure_cnn_pipeline():
     #     weights=weights,
     #     monitor_enable=True,
     # )
-    weights = np.zeros((8, 8, 5, 5), dtype=np.int8)
+    # Two eight-channel banks share the optical-flow direction and sub-pixel
+    # address mapping.  Bank 1 uses the complementary spatial diagonal so a
+    # real contour can contribute through both slopes without shifting its
+    # decoded 128x128 position.
+    weights = np.zeros((LAYER4_FEATURE_COUNT, 8, 5, 5), dtype=np.int8)
     tangent = False
     if tangent==True:
         kernel_anti = np.array([
@@ -555,23 +560,25 @@ def configure_cnn_pipeline():
     weights[5, 6] = kernel_anti
     weights[6, 7] = kernel_anti
 
-        # 右下、左上：空间方向都是 \
-    weights[0+8, 0] = kernel_anti
-    weights[3+8, 1] = kernel_anti
-    weights[4+8, 2] = kernel_anti
-    weights[7+8, 3] = kernel_anti
+    # 第二组保持光流方向不变，但交换空间斜率。
+    # 右下、左上：空间方向改为 /
+    weights[8, 0] = kernel_anti
+    weights[11, 1] = kernel_anti
+    weights[12, 2] = kernel_anti
+    weights[15, 3] = kernel_anti
 
-    # 左下、右上：空间方向都是 /
-    weights[1+8, 4] = kernel_main
-    weights[2+8, 5] = kernel_main
-    weights[5+8, 6] = kernel_main
-    weights[6+8, 7] = kernel_main
+    # 左下、右上：空间方向改为 \
+    weights[9, 4] = kernel_main
+    weights[10, 5] = kernel_main
+    weights[13, 6] = kernel_main
+    weights[14, 7] = kernel_main
 
     create_layer(
         layer_name="layer_4", layer=layer_4,
         padding=2, stride=1, kernel_size=5,
         input_shape_feature=8, input_shape_size_x=64, input_shape_size_y=64,
-        output_shape_feature=8, output_shape_size_x=64, output_shape_size_y=64,
+        output_shape_feature=LAYER4_FEATURE_COUNT,
+        output_shape_size_x=64, output_shape_size_y=64,
         threshold_high=4, threshold_low=-1,
         weights=weights,
         monitor_enable=True,
@@ -1202,6 +1209,7 @@ def main():
             "hit_replay_config": asdict(HIT_REPLAY_CONFIG),
             "terminal_config": asdict(TERMINAL_CONFIG),
             "layer4": layer_4,
+            "layer4_feature_count": LAYER4_FEATURE_COUNT,
             "feature_to_direction": FEATURE_TO_DIRECTION,
             "direction_angles_deg": DIRECTION_ANGLES_DEG,
         }

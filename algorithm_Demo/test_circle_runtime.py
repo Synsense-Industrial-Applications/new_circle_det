@@ -22,6 +22,7 @@ from circle_runtime import (
     FEATURE_TO_DIRECTION,
     decode_layer4_event,
 )
+from layer4_layout import D_HOUGH_FEATURES, S_HOUGH_FEATURES
 
 
 def fake_detection(**overrides):
@@ -105,11 +106,9 @@ class Layer4DecodeTests(unittest.TestCase):
             (0, 1),
             (1, 0),
             (1, 1),
-            (0, 0),
-            (0, 1),
-            (1, 0),
-            (1, 1),
-        )
+        ) * 4
+        self.assertEqual(len(FEATURE_TO_DIRECTION), 16)
+        self.assertEqual(FEATURE_TO_DIRECTION[:8], FEATURE_TO_DIRECTION[8:])
         for feature, (offset_x, offset_y) in enumerate(expected_xy_offsets):
             with self.subTest(feature=feature):
                 event = decode_layer4_event(11, 17, feature, 1234)
@@ -117,6 +116,11 @@ class Layer4DecodeTests(unittest.TestCase):
                 self.assertEqual(event.y, 34 + offset_y)
                 self.assertEqual(event.c, FEATURE_TO_DIRECTION[feature])
                 self.assertEqual(event.t, 1234)
+
+    def test_ds_vote_families_partition_all_16_features(self):
+        self.assertEqual(D_HOUGH_FEATURES | S_HOUGH_FEATURES, frozenset(range(16)))
+        self.assertFalse(D_HOUGH_FEATURES & S_HOUGH_FEATURES)
+        self.assertEqual(D_HOUGH_FEATURES, frozenset((0, 3, 4, 7, 8, 11, 12, 15)))
 
 
 class FakeDetector:
@@ -150,7 +154,9 @@ class PipelineTests(unittest.TestCase):
         )
 
         updates = [
-            pipeline.process_raw_event(10, 10, index % 8, 1000 + index)
+            pipeline.process_raw_event(
+                10, 10, index % len(FEATURE_TO_DIRECTION), 1000 + index
+            )
             for index in range(7)
         ]
 
