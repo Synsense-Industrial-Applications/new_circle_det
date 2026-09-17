@@ -611,43 +611,38 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
     #     weights=weights,
     #     monitor_enable=True,
     # )
-    # The imported split-D network reaches this head as 62x62x8.  A 5x5
-    # convolution with padding=3 expands it to the required 64x64 interface.
+    # The imported split-D network reaches this head as 62x62x8.  A 3x3
+    # convolution with padding=2 expands it to the required 64x64 interface.
+    # Padding=2 (not 1) keeps the center tap aligned with the same coarse
+    # coordinate frame the previous 5x5/padding=3 head used, so the decoded
+    # 128x128 geometry is unchanged while the kernel needs fewer taps.
     # Two eight-channel banks share the optical-flow direction and sub-pixel
     # address mapping; bank 1 uses the complementary spatial diagonal.
-    weights = np.zeros((LAYER4_FEATURE_COUNT, 8, 5, 5), dtype=np.int8)
+    weights = np.zeros((LAYER4_FEATURE_COUNT, 8, 3, 3), dtype=np.int8)
     tangent = False
     if tangent==True:
         kernel_anti = np.array([
-            [1, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0],
-            [0, 0, 2, 0, 0],
-            [0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 1],
+            [1, 0, 0],
+            [0, 2, 0],
+            [0, 0, 1],
         ], dtype=np.int8)
 
         kernel_main = np.array([
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 1, 0],
-            [0, 0, 2, 0, 0],
-            [0, 1, 0, 0, 0],
-            [1, 0, 0, 0, 0],
+            [0, 0, 1],
+            [0, 2, 0],
+            [1, 0, 0],
         ], dtype=np.int8)
     else:
         kernel_main = np.array([
-            [1, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0],
-            [0, 0, 2, 0, 0],
-            [0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 1],
+            [1, 0, 0],
+            [0, 2, 0],
+            [0, 0, 1],
         ], dtype=np.int8)
 
         kernel_anti = np.array([
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 1, 0],
-            [0, 0, 2, 0, 0],
-            [0, 1, 0, 0, 0],
-            [1, 0, 0, 0, 0],
+            [0, 0, 1],
+            [0, 2, 0],
+            [1, 0, 0],
         ], dtype=np.int8)
     # 右下、左上：空间方向都是 \
     weights[0, 0] = kernel_main
@@ -676,15 +671,15 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
 
     create_layer(
         layer_name="layer_4", layer=layer_4,
-        padding=3, stride=1, kernel_size=5,
+        padding=2, stride=1, kernel_size=3,
         input_shape_feature=8, input_shape_size_x=62, input_shape_size_y=62,
         output_shape_feature=LAYER4_FEATURE_COUNT,
         output_shape_size_x=LAYER4_SOURCE_SIZE,
         output_shape_size_y=LAYER4_SOURCE_SIZE,
-        threshold_high=4, threshold_low=-1,
+        threshold_high=3, threshold_low=-1,
         weights=weights,
         monitor_enable=True,
-        leak_enable=True, bias=-3,
+        leak_enable=True, bias=-2,
     )
 
     # ``monitor_enable`` emits pre-processed Layer-13 Spike events, whereas

@@ -9,7 +9,7 @@
 ```text
 Speck2f Layer-4 事件
   -> split-D 前级：64x64 -> 63x63 -> 62x62
-  -> 5x5、padding=3 的双斜率输出头：64x64x16
+  -> 3x3、padding=2 的双斜率输出头：64x64x16
   -> 解码为 128x128 的 (x, y, direction, timestamp)
   -> 最近 230 个事件的自适应三点圆共识
   -> xiaoiron_confidence

@@ -174,7 +174,7 @@ class DemoRecordTests(unittest.TestCase):
             2,
         )
         self.assertIn(
-            "padding=3, stride=1, kernel_size=5, "
+            "padding=2, stride=1, kernel_size=3, "
             "input_shape_feature=8, input_shape_size_x=62, "
             "input_shape_size_y=62,",
             compact,
