@@ -19,9 +19,10 @@ from speck_tools import ChannelHelper
 
 
 # ── Layer-4 输出头 ──
-# weights 及其配套的 threshold_high / bias 由 switch（下标）从
-# layer4_weights.py 取；threshold_low 手动输入。
-LAYER4_WEIGHT_INDEX = 0        # 0=diag3, 1=tangent3, 2=diag5, 3=diag5_long
+# weights 及其配套的 output_features / threshold_high / bias 由 switch（下标）
+# 从 layer4_weights.py 取；threshold_low 手动输入。
+# 下标 0..3 输出 16 通道，4..11 是同一套按 0..7 / 8..15 切开后的 8 通道版本。
+LAYER4_WEIGHT_INDEX = 0        # 见 layer4_weights.format_weights_table()
 LAYER4_THRESHOLD_LOW = -1
 
 
@@ -345,14 +346,15 @@ def create_layer(layer_name, layer, padding, stride, kernel_size,
 def configure_cnn_pipeline(raw_dvs_monitor=False):
     """构建 split-D-ON/OFF 3x3 输入、2x2 映射核的 CNN 流水线。
 
-    Layer-4 输出头不在函数体里硬编码：weights 和配套的 ``threshold_high`` /
-    ``bias`` 由本模块顶部的 ``LAYER4_WEIGHT_INDEX`` 用 switch 选（见
-    ``layer4_weights.py``），``LAYER4_THRESHOLD_LOW`` 手动输入。
+    Layer-4 输出头不在函数体里硬编码：weights、输出通道数和配套的
+    ``threshold_high`` / ``bias`` 由本模块顶部的 ``LAYER4_WEIGHT_INDEX`` 用
+    switch 选（见 ``layer4_weights.py``），``LAYER4_THRESHOLD_LOW`` 手动输入。
     """
     # 先取 Layer-4 weights，这样下标写错时会在打开设备之前就报错。
     layer4_head = get_layer4_weights(LAYER4_WEIGHT_INDEX)
     print(
         f"[layer4] weights[{LAYER4_WEIGHT_INDEX}]={layer4_head['name']} "
+        f"output_features={layer4_head['output_features']} "
         f"kernel={layer4_head['kernel_size']}x{layer4_head['kernel_size']} "
         f"padding={layer4_head['padding']} "
         f"shape={layer4_head['weights'].shape} "
@@ -506,15 +508,15 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
     # Two eight-channel banks share the optical-flow direction and sub-pixel
     # address mapping; bank 1 uses the complementary spatial diagonal.
     #
-    # 权重及配套的 threshold_high / bias 取自本模块顶部的 LAYER4_WEIGHT_INDEX
-    # （下标 0 = diag3，等价于原来的手写权重），threshold_low 手动输入。
-    # 这里只保留 8 -> 16 通道、62 -> 64 的接口。
+    # 权重及配套参数取自本模块顶部的 LAYER4_WEIGHT_INDEX（下标 0 = diag3，
+    # 等价于原来的手写权重），threshold_low 手动输入。输出通道数由 weights
+    # 条目给出（16 通道整头，或拆开后的 8 通道）。
     create_layer(
         layer_name="layer_4", layer=layer_4,
         padding=layer4_head["padding"], stride=1,
         kernel_size=layer4_head["kernel_size"],
         input_shape_feature=8, input_shape_size_x=62, input_shape_size_y=62,
-        output_shape_feature=LAYER4_FEATURE_COUNT,
+        output_shape_feature=layer4_head["output_features"],
         output_shape_size_x=LAYER4_SOURCE_SIZE,
         output_shape_size_y=LAYER4_SOURCE_SIZE,
         threshold_high=layer4_head["threshold_high"],

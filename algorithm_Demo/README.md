@@ -47,31 +47,47 @@ Layer-4 的最终接口仍为 `64x64x16`。`0..7` 是第一组光流输出通道
 
 ### Layer-4 输出头的 weights 和阈值
 
-`layer4_weights.py` 里每套 weights 就是一个函数（`weights_diag3()`、
-`weights_diag5()` …），函数体里直接写出 weights，并返回它配套的
-`kernel_size` / `padding` / `threshold_high` / `bias`。
-`get_layer4_weights(index)` 用 if/elif（switch）按下标取用：
+`layer4_weights.py` 里每套 weights 就是一个函数，显式写出 weights，并返回它
+配套的 `kernel_size` / `padding` / `output_features` / `threshold_high` / `bias`。
+`get_layer4_weights(index)` 用 if/elif（switch）按下标取用，共 12 套
+（原来 4 套 × 3）：
 
-| 下标 | 名称 | kernel | threshold_high | bias | 说明 |
+| 下标 | 名称 | 输出通道 | kernel | threshold_high | bias |
 |---|---|---|---|---|---|
-| `0` | `diag3` | 3x3 | 3 | -2 | 默认，等价于原来的手写权重（中心 2、对角 tap=1） |
-| `1` | `tangent3` | 3x3 | 3 | -2 | 交换主/互补斜率，等价于旧代码的 `tangent=True` |
-| `2` | `diag5` | 5x5 | 4 | -3 | 5x5 对角核，`padding` 相应改为 3，tap 更多所以阈值更严 |
-| `3` | `diag5_long` | 5x5 | 3 | -2 | 5x5 只用半径 2 的远端 tap，基线更长 |
+| `0` | `diag3` | 16 | 3x3 | 3 | -2 |
+| `1` | `tangent3` | 16 | 3x3 | 3 | -2 |
+| `2` | `diag5` | 16 | 5x5 | 4 | -3 |
+| `3` | `diag5_long` | 16 | 5x5 | 3 | -2 |
+| `4` | `diag3_a` | 8 | 3x3 | 3 | -2 |
+| `5` | `diag3_b` | 8 | 3x3 | 3 | -2 |
+| `6` | `tangent3_a` | 8 | 3x3 | 3 | -2 |
+| `7` | `tangent3_b` | 8 | 3x3 | 3 | -2 |
+| `8` | `diag5_a` | 8 | 5x5 | 4 | -3 |
+| `9` | `diag5_b` | 8 | 5x5 | 4 | -3 |
+| `10` | `diag5_long_a` | 8 | 5x5 | 3 | -2 |
+| `11` | `diag5_long_b` | 8 | 5x5 | 3 | -2 |
 
-换 weights 时 `threshold_high` / `bias` 会跟着该套一起生效；只有
-`threshold_low` 在 `Demo_SNN.py` 顶部手动输入：
+`0..3` 是输出 16 通道的整头：前 8 个通道用主斜率核，后 8 个通道保持同一
+光流方向、换成互补斜率核。`4..11` 是把每套按输出通道 `0..7` / `8..15`
+对半切开后的 8 通道版本（`_a` = 前 8 通道的主斜率核，`_b` = 后 8 通道的
+互补斜率核，两者拼起来就是原 16 通道）。两半各自的 D/S 家族分组不变。
+
+`Demo_SNN.py` 不再写死 16 通道，而是用条目里的 `output_features`：
 
 ```python
 # Demo_SNN.py
-LAYER4_WEIGHT_INDEX = 0        # switch：0=diag3, 1=tangent3, 2=diag5, 3=diag5_long
+LAYER4_WEIGHT_INDEX = 0        # switch：0..11
 LAYER4_THRESHOLD_LOW = -1      # 手动输入
 ```
 
-`Demo_SNN.py` 只提供固定的接口形状（8 → 16 通道、62 → 64），启动时会打印
-生效的下标、核尺寸、padding、weights 形状、`threshold_high`、`threshold_low`
-和 `bias`。其他入口（`Demo_algorithm.py`、`Demo_record.py`、`DS_Demo.py`）
-不接 Layer-4 参数，自动使用同一份 weights。
+`Demo_SNN.py` 只提供固定的输入接口（8 通道输入、62x62），输出通道数、
+`kernel_size`、`padding`、`weights`、`threshold_high`、`bias` 全部来自
+选中的条目。启动时会打印生效的下标、名称、输出通道数、核尺寸、padding、
+weights 形状和阈值。其他入口（`Demo_algorithm.py`、`Demo_record.py`、
+`DS_Demo.py`）不接 Layer-4 参数，自动使用同一份 weights。
+
+注意：用 8 通道条目时，下游 128x128 解码和圆检测原本按 `64x64x16` 设计，
+需要相应调整（两个 8 通道头各自连接后再合并）。
 
 加新 weights：写一个 `weights_xxx()` 显式写出权重并返回上述字段，在
 `get_layer4_weights()` 的 if/elif 里加一个分支，再把 `WEIGHT_COUNT` 加 1。

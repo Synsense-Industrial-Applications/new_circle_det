@@ -95,13 +95,15 @@ python algorithm_Demo/Demo_algorithm.py
 加载当前 SNN，再执行圆检测、过滤、日志和击球回放。网络和硬件参数说明见
 [`algorithm_Demo/README.md`](algorithm_Demo/README.md)。
 
-Layer-4 输出头的 weights（含配套的 `threshold_high` / `bias`）由
+Layer-4 输出头的 weights（含配套的 `output_features` / `threshold_high` /
+`bias`）由
 [`algorithm_Demo/layer4_weights.py`](algorithm_Demo/layer4_weights.py)
-中的多套权重提供，用 switch（下标）选择；`threshold_low` 手动输入。两处都在
+中的 12 套权重提供（4 套 16 通道整头 + 每套按 `0..7` / `8..15` 拆出的两个
+8 通道版本），用 switch（下标）选择；`threshold_low` 手动输入。两处都在
 [`algorithm_Demo/Demo_SNN.py`](algorithm_Demo/Demo_SNN.py) 顶部指定：
 
 ```python
-LAYER4_WEIGHT_INDEX = 0        # switch：0=diag3, 1=tangent3, 2=diag5, 3=diag5_long
+LAYER4_WEIGHT_INDEX = 0        # switch：0..11（输出通道数由条目给出）
 LAYER4_THRESHOLD_LOW = -1      # 手动输入
 ```
 

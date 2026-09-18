@@ -152,6 +152,7 @@ class DemoRecordTests(unittest.TestCase):
         self.assertIn("LAYER4_WEIGHT_INDEX = 0", compact)
         self.assertIn("get_layer4_weights(LAYER4_WEIGHT_INDEX)", compact)
         self.assertIn("LAYER4_THRESHOLD_LOW = -1", compact)
+        self.assertIn('layer4_head["output_features"]', compact)
         self.assertIn('layer4_head["threshold_high"]', compact)
         self.assertIn('layer4_head["bias"]', compact)
         self.assertIn("from layer4_weights import", compact)

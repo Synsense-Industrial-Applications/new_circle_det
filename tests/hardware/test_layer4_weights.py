@@ -73,8 +73,8 @@ class DefaultWeightsTests(unittest.TestCase):
         self.assertEqual(entry["kernel_size"], 3)
         self.assertEqual(entry["padding"], 2)
 
-    def test_entry_carries_threshold_high_and_bias(self):
-        # threshold_high / bias 跟 weights 一起由 get_layer4_weights 返回；
+    def test_entry_carries_output_features_threshold_and_bias(self):
+        # output_features / threshold_high / bias 跟 weights 一起返回；
         # threshold_low 在 Demo_SNN.py 里手动输入，不在条目里。
         for index in range(layer4_weights.WEIGHT_COUNT):
             with self.subTest(index=index):
@@ -85,12 +85,14 @@ class DefaultWeightsTests(unittest.TestCase):
                         "name",
                         "kernel_size",
                         "padding",
+                        "output_features",
                         "threshold_high",
                         "bias",
                         "weights",
                     },
                 )
                 self.assertNotIn("threshold_low", entry)
+                self.assertIn(entry["output_features"], (16, 8))
                 self.assertIsInstance(entry["threshold_high"], int)
                 self.assertIsInstance(entry["bias"], int)
 
@@ -129,13 +131,13 @@ class EveryWeightsTests(unittest.TestCase):
                 entry = layer4_weights.get_layer4_weights(index)
                 self.assertIsInstance(entry["name"], str)
 
-    def test_every_weights_keeps_the_64_by_64_by_16_interface(self):
+    def test_every_weights_keeps_the_64_by_64_interface(self):
         for index in range(layer4_weights.WEIGHT_COUNT):
             with self.subTest(index=index):
                 entry = layer4_weights.get_layer4_weights(index)
                 kernel_size = entry["kernel_size"]
                 weights = entry["weights"]
-                self.assertEqual(weights.shape[0], LAYER4_FEATURE_COUNT)
+                self.assertEqual(weights.shape[0], entry["output_features"])
                 self.assertEqual(weights.shape[1], 8)
                 self.assertEqual(weights.shape[2], kernel_size)
                 self.assertEqual(weights.shape[3], kernel_size)
@@ -149,14 +151,15 @@ class EveryWeightsTests(unittest.TestCase):
         for index in range(layer4_weights.WEIGHT_COUNT):
             with self.subTest(index=index):
                 weights = layer4_weights.get_layer4_weights(index)["weights"]
-                for feature in range(LAYER4_FEATURE_COUNT):
+                for feature in range(weights.shape[0]):
                     used = np.flatnonzero(np.any(weights[feature] != 0, axis=(1, 2)))
                     self.assertEqual(len(used), 1)
 
-    def test_every_weights_swaps_the_two_banks_spatially(self):
-        for index in range(layer4_weights.WEIGHT_COUNT):
+    def test_full_weights_swap_the_two_banks_spatially(self):
+        for index in layer4_weights.FULL_WEIGHT_INDICES:
             with self.subTest(index=index):
                 weights = layer4_weights.get_layer4_weights(index)["weights"]
+                self.assertEqual(weights.shape[0], 16)
                 for feature in range(8):
                     self.assertFalse(
                         np.array_equal(weights[feature], weights[feature + 8])
@@ -177,12 +180,26 @@ class EveryWeightsTests(unittest.TestCase):
             "name": "bad",
             "kernel_size": 5,
             "padding": 3,
+            "output_features": 16,
             "threshold_high": 3,
             "bias": -2,
             "weights": np.zeros((16, 8, 3, 3), dtype=np.int8),
         }
         with self.assertRaises(ValueError):
             layer4_weights._check_weights(2, bad)
+
+    def test_unexpected_output_features_is_reported(self):
+        bad = {
+            "name": "bad",
+            "kernel_size": 3,
+            "padding": 2,
+            "output_features": 4,
+            "threshold_high": 3,
+            "bias": -2,
+            "weights": np.zeros((4, 8, 3, 3), dtype=np.int8),
+        }
+        with self.assertRaises(ValueError):
+            layer4_weights._check_weights(0, bad)
 
 
 class WeightDetailTests(unittest.TestCase):
@@ -222,6 +239,85 @@ class WeightDetailTests(unittest.TestCase):
         self.assertIn("diag5_long", table)
         self.assertIn("threshold_high", table)
         self.assertIn("bias", table)
+
+
+class SplitWeightsTests(unittest.TestCase):
+    def test_total_count_is_three_times_the_full_weights(self):
+        # 原来的 4 套整头 + 每套拆出的 _a / _b，共 12 套。
+        self.assertEqual(
+            layer4_weights.WEIGHT_COUNT,
+            3 * len(layer4_weights.FULL_WEIGHT_INDICES),
+        )
+        self.assertEqual(len(layer4_weights.FULL_WEIGHT_INDICES), 4)
+
+    def test_full_and_split_indices_are_listed_separately(self):
+        full = layer4_weights.FULL_WEIGHT_INDICES
+        split = layer4_weights.SPLIT_WEIGHT_INDICES
+        self.assertEqual(full, (0, 1, 2, 3))
+        self.assertEqual(split, (4, 5, 6, 7, 8, 9, 10, 11))
+        self.assertEqual(
+            sorted(full + split), list(range(layer4_weights.WEIGHT_COUNT))
+        )
+
+    def test_split_entries_output_eight_channels(self):
+        for index in layer4_weights.SPLIT_WEIGHT_INDICES:
+            with self.subTest(index=index):
+                entry = layer4_weights.get_layer4_weights(index)
+                self.assertEqual(entry["output_features"], 8)
+                self.assertEqual(entry["weights"].shape[0], 8)
+
+    def test_a_and_b_together_equal_the_full_weights(self):
+        for full_index in layer4_weights.FULL_WEIGHT_INDICES:
+            with self.subTest(index=full_index):
+                full = layer4_weights.get_layer4_weights(full_index)
+                first = layer4_weights.get_layer4_weights(full_index * 2 + 4)
+                second = layer4_weights.get_layer4_weights(full_index * 2 + 5)
+                self.assertEqual(first["name"], full["name"] + "_a")
+                self.assertEqual(second["name"], full["name"] + "_b")
+                self.assertTrue(
+                    np.array_equal(
+                        first["weights"], full["weights"][:8]
+                    )
+                )
+                self.assertTrue(
+                    np.array_equal(
+                        second["weights"], full["weights"][8:]
+                    )
+                )
+                self.assertTrue(
+                    np.array_equal(
+                        np.concatenate(
+                            [first["weights"], second["weights"]]
+                        ),
+                        full["weights"],
+                    )
+                )
+
+    def test_split_entries_keep_the_full_geometry_and_tunables(self):
+        for full_index in layer4_weights.FULL_WEIGHT_INDICES:
+            with self.subTest(index=full_index):
+                full = layer4_weights.get_layer4_weights(full_index)
+                for index in (full_index * 2 + 4, full_index * 2 + 5):
+                    entry = layer4_weights.get_layer4_weights(index)
+                    for field in (
+                        "kernel_size",
+                        "padding",
+                        "threshold_high",
+                        "bias",
+                    ):
+                        self.assertEqual(entry[field], full[field])
+
+    def test_split_weights_are_copies(self):
+        first = layer4_weights.get_layer4_weights(4)
+        second = layer4_weights.get_layer4_weights(4)
+        self.assertIsNot(first["weights"], second["weights"])
+        first["weights"][0, 0] = 0
+        self.assertTrue(
+            np.array_equal(
+                second["weights"],
+                layer4_weights.get_layer4_weights(0)["weights"][:8],
+            )
+        )
 
 
 if __name__ == "__main__":
