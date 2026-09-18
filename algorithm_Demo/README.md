@@ -34,14 +34,49 @@ Speck2f Layer-4 事件
 Layer-4 的最终接口仍为 `64x64x16`。`0..7` 是第一组光流输出通道，
 `8..15` 保留相同的光流方向和 2x2 子像素地址，但使用互补空间卷积核。
 普通圆检测和 `DS_Demo.py` 都按原始光流方向合并对应的两组通道，再分别
-累计 `D=y-x` 和 `S=x+y`。
+累计 `D=y-x` 和 `S=x+y`。输出头自身的 weights 来自
+`layer4_weights.py` 中选中的那套，阈值在 `Demo_SNN.py` 里手动输入，
+详见下文"Layer-4 输出头的 weights 和阈值"。
 
 检测器默认每 6 个输入事件更新一次，但每个事件都会按原始顺序进入窗口。
 没有把检测器的缓存结果重复当作新圆输出。
 
 ## 调整参数
 
-网络结构、卷积核、阈值、层编号和监控开关在 `Demo_SNN.py` 中修改。
+网络结构、层编号和监控开关在 `Demo_SNN.py` 中修改。
+
+### Layer-4 输出头的 weights 和阈值
+
+`layer4_weights.py` 里每套 weights 就是一个函数（`weights_diag3()`、
+`weights_diag5()` …），函数体里直接写出 weights，并返回它配套的
+`kernel_size` / `padding` / `threshold_high` / `bias`。
+`get_layer4_weights(index)` 用 if/elif（switch）按下标取用：
+
+| 下标 | 名称 | kernel | threshold_high | bias | 说明 |
+|---|---|---|---|---|---|
+| `0` | `diag3` | 3x3 | 3 | -2 | 默认，等价于原来的手写权重（中心 2、对角 tap=1） |
+| `1` | `tangent3` | 3x3 | 3 | -2 | 交换主/互补斜率，等价于旧代码的 `tangent=True` |
+| `2` | `diag5` | 5x5 | 4 | -3 | 5x5 对角核，`padding` 相应改为 3，tap 更多所以阈值更严 |
+| `3` | `diag5_long` | 5x5 | 3 | -2 | 5x5 只用半径 2 的远端 tap，基线更长 |
+
+换 weights 时 `threshold_high` / `bias` 会跟着该套一起生效；只有
+`threshold_low` 在 `Demo_SNN.py` 顶部手动输入：
+
+```python
+# Demo_SNN.py
+LAYER4_WEIGHT_INDEX = 0        # switch：0=diag3, 1=tangent3, 2=diag5, 3=diag5_long
+LAYER4_THRESHOLD_LOW = -1      # 手动输入
+```
+
+`Demo_SNN.py` 只提供固定的接口形状（8 → 16 通道、62 → 64），启动时会打印
+生效的下标、核尺寸、padding、weights 形状、`threshold_high`、`threshold_low`
+和 `bias`。其他入口（`Demo_algorithm.py`、`Demo_record.py`、`DS_Demo.py`）
+不接 Layer-4 参数，自动使用同一份 weights。
+
+加新 weights：写一个 `weights_xxx()` 显式写出权重并返回上述字段，在
+`get_layer4_weights()` 的 if/elif 里加一个分支，再把 `WEIGHT_COUNT` 加 1。
+换卷积核尺寸时记得一起改 `padding`，让
+`62 + 2 * padding - kernel_size + 1 == 64`。
 
 圆检测常用参数集中在 `Demo_algorithm.py` 开头：
 

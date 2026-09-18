@@ -122,9 +122,10 @@ class DemoRecordTests(unittest.TestCase):
 
     def test_demo_configuration_owns_the_raw_monitor_switch(self):
         source = (ALGORITHM_DIR / "Demo_SNN.py").read_text(encoding="utf-8")
+        compact = " ".join(source.split())
         self.assertIn(
             "def configure_cnn_pipeline(raw_dvs_monitor=False):",
-            source,
+            compact,
         )
         self.assertIn(
             "config.dvs_layer.raw_monitor_enable = bool(raw_dvs_monitor)",
@@ -142,6 +143,23 @@ class DemoRecordTests(unittest.TestCase):
             recorder_source,
         )
         self.assertIn("visualize_raw_dvs(dev_kit)", recorder_source)
+
+    def test_layer4_weights_are_selected_only_in_demo_snn(self):
+        snn_source = (ALGORITHM_DIR / "Demo_SNN.py").read_text(encoding="utf-8")
+        compact = " ".join(snn_source.split())
+        # weights 用 switch 选下标，threshold_high / bias 随 weights 返回，
+        # 只留 threshold_low 手动输入。
+        self.assertIn("LAYER4_WEIGHT_INDEX = 0", compact)
+        self.assertIn("get_layer4_weights(LAYER4_WEIGHT_INDEX)", compact)
+        self.assertIn("LAYER4_THRESHOLD_LOW = -1", compact)
+        self.assertIn('layer4_head["threshold_high"]', compact)
+        self.assertIn('layer4_head["bias"]', compact)
+        self.assertIn("from layer4_weights import", compact)
+        # 其他入口不应再自己选 Layer-4 weights。
+        for name in ("Demo_algorithm.py", "Demo_record.py", "DS_Demo.py"):
+            with self.subTest(entry=name):
+                entry_source = (ALGORITHM_DIR / name).read_text(encoding="utf-8")
+                self.assertNotIn("layer4_weights", entry_source)
 
     def test_recorder_uses_the_high_bandwidth_interface_clock(self):
         self.assertEqual(self.recorder.RECORDER_INTERFACE_CLOCK_HZ, 25_000_000)
@@ -179,12 +197,13 @@ class DemoRecordTests(unittest.TestCase):
             ),
             2,
         )
-        self.assertIn(
-            "padding=2, stride=1, kernel_size=3, "
-            "input_shape_feature=8, input_shape_size_x=62, "
-            "input_shape_size_y=62,",
-            compact,
-        )
+        # Layer-4 weights 由 Demo_SNN.py 顶部的 LAYER4_WEIGHT_INDEX 驱动；每套
+        # weights 的 kernel/padding 由 tests/hardware/test_layer4_weights.py
+        # 逐项校验，因此这里只确认接线没有退回硬编码。
+        self.assertIn("get_layer4_weights(LAYER4_WEIGHT_INDEX)", compact)
+        self.assertIn('layer4_head["weights"]', compact)
+        self.assertIn('layer_name="layer_4"', compact)
+        self.assertNotIn("kernel_main", source)
         self.assertEqual(self.recorder.LAYER4_SOURCE_SIZE, 64)
         self.assertEqual(self.recorder.LAYER4_FEATURE_COUNT, 16)
 

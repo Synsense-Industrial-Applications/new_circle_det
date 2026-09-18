@@ -14,7 +14,24 @@ import samna
 import samnagui
 
 from layer4_layout import LAYER4_FEATURE_COUNT, LAYER4_SOURCE_SIZE
+from layer4_weights import get_layer4_weights
 from speck_tools import ChannelHelper
+
+
+# ── Layer-4 输出头 ──
+# weights 及其配套的 threshold_high / bias 由 switch（下标）从
+# layer4_weights.py 取；threshold_low 手动输入。
+LAYER4_WEIGHT_INDEX = 0        # 0=diag3, 1=tangent3, 2=diag5, 3=diag5_long
+LAYER4_THRESHOLD_LOW = -1
+
+
+# Layer-4 输出接口契约：layer4_weights 里每套 weights 都必须产出这个形状，
+# 下游 128x128 解码（decode_layer4_address）依赖它。
+LAYER4_OUTPUT_SHAPE = (
+    LAYER4_SOURCE_SIZE,
+    LAYER4_SOURCE_SIZE,
+    LAYER4_FEATURE_COUNT,
+)
 
 
 # ===========================================================================
@@ -326,7 +343,23 @@ def create_layer(layer_name, layer, padding, stride, kernel_size,
 
 
 def configure_cnn_pipeline(raw_dvs_monitor=False):
-    """构建 split-D-ON/OFF 3x3 输入、2x2 映射核的 CNN 流水线。"""
+    """构建 split-D-ON/OFF 3x3 输入、2x2 映射核的 CNN 流水线。
+
+    Layer-4 输出头不在函数体里硬编码：weights 和配套的 ``threshold_high`` /
+    ``bias`` 由本模块顶部的 ``LAYER4_WEIGHT_INDEX`` 用 switch 选（见
+    ``layer4_weights.py``），``LAYER4_THRESHOLD_LOW`` 手动输入。
+    """
+    # 先取 Layer-4 weights，这样下标写错时会在打开设备之前就报错。
+    layer4_head = get_layer4_weights(LAYER4_WEIGHT_INDEX)
+    print(
+        f"[layer4] weights[{LAYER4_WEIGHT_INDEX}]={layer4_head['name']} "
+        f"kernel={layer4_head['kernel_size']}x{layer4_head['kernel_size']} "
+        f"padding={layer4_head['padding']} "
+        f"shape={layer4_head['weights'].shape} "
+        f"threshold_high={layer4_head['threshold_high']} "
+        f"threshold_low={LAYER4_THRESHOLD_LOW} bias={layer4_head['bias']}"
+    )
+
     config.dvs_layer.destinations[0].layer = layer_0_0
     config.dvs_layer.destinations[0].enable = 1
     # Both split branches must receive the same two-polarity DVS input.  The
@@ -465,24 +498,6 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
     )
 
     # ── Layer 4 (64x64x16 兼容输出头) ──
-    # weights = np.zeros((8, 8, 1, 1), dtype=np.int8)
-    # weights[0, 0, 0, 0] = 1
-    # weights[3, 1, 0, 0] = 1
-    # weights[4, 2, 0, 0] = 1
-    # weights[7, 3, 0, 0] = 1
-    # weights[1, 4, 0, 0] = 1
-    # weights[2, 5, 0, 0] = 1
-    # weights[5, 6, 0, 0] = 1
-    # weights[6, 7, 0, 0] = 1
-    # create_layer(
-    #     layer_name="layer_4", layer=layer_4,
-    #     padding=0, stride=1, kernel_size=1,
-    #     input_shape_feature=8, input_shape_size_x=64, input_shape_size_y=64,
-    #     output_shape_feature=8, output_shape_size_x=64, output_shape_size_y=64,
-    #     threshold_high=1, threshold_low=-1,
-    #     weights=weights,
-    #     monitor_enable=True,
-    # )
     # The imported split-D network reaches this head as 62x62x8.  A 3x3
     # convolution with padding=2 expands it to the required 64x64 interface.
     # Padding=2 (not 1) keeps the center tap aligned with the same coarse
@@ -490,68 +505,23 @@ def configure_cnn_pipeline(raw_dvs_monitor=False):
     # 128x128 geometry is unchanged while the kernel needs fewer taps.
     # Two eight-channel banks share the optical-flow direction and sub-pixel
     # address mapping; bank 1 uses the complementary spatial diagonal.
-    weights = np.zeros((LAYER4_FEATURE_COUNT, 8, 3, 3), dtype=np.int8)
-    tangent = False
-    if tangent==True:
-        kernel_anti = np.array([
-            [1, 0, 0],
-            [0, 2, 0],
-            [0, 0, 1],
-        ], dtype=np.int8)
-
-        kernel_main = np.array([
-            [0, 0, 1],
-            [0, 2, 0],
-            [1, 0, 0],
-        ], dtype=np.int8)
-    else:
-        kernel_main = np.array([
-            [1, 0, 0],
-            [0, 2, 0],
-            [0, 0, 1],
-        ], dtype=np.int8)
-
-        kernel_anti = np.array([
-            [0, 0, 1],
-            [0, 2, 0],
-            [1, 0, 0],
-        ], dtype=np.int8)
-    # 右下、左上：空间方向都是 \
-    weights[0, 0] = kernel_main
-    weights[3, 1] = kernel_main
-    weights[4, 2] = kernel_main
-    weights[7, 3] = kernel_main
-
-    # 左下、右上：空间方向都是 /
-    weights[1, 4] = kernel_anti
-    weights[2, 5] = kernel_anti
-    weights[5, 6] = kernel_anti
-    weights[6, 7] = kernel_anti
-
-    # 第二组保持光流方向不变，但交换空间斜率。
-    # 右下、左上：空间方向改为 /
-    weights[8, 0] = kernel_anti
-    weights[11, 1] = kernel_anti
-    weights[12, 2] = kernel_anti
-    weights[15, 3] = kernel_anti
-
-    # 左下、右上：空间方向改为 \
-    weights[9, 4] = kernel_main
-    weights[10, 5] = kernel_main
-    weights[13, 6] = kernel_main
-    weights[14, 7] = kernel_main
-
+    #
+    # 权重及配套的 threshold_high / bias 取自本模块顶部的 LAYER4_WEIGHT_INDEX
+    # （下标 0 = diag3，等价于原来的手写权重），threshold_low 手动输入。
+    # 这里只保留 8 -> 16 通道、62 -> 64 的接口。
     create_layer(
         layer_name="layer_4", layer=layer_4,
-        padding=2, stride=1, kernel_size=3,
+        padding=layer4_head["padding"], stride=1,
+        kernel_size=layer4_head["kernel_size"],
         input_shape_feature=8, input_shape_size_x=62, input_shape_size_y=62,
         output_shape_feature=LAYER4_FEATURE_COUNT,
         output_shape_size_x=LAYER4_SOURCE_SIZE,
         output_shape_size_y=LAYER4_SOURCE_SIZE,
-        threshold_high=3, threshold_low=-1,
-        weights=weights,
+        threshold_high=layer4_head["threshold_high"],
+        threshold_low=LAYER4_THRESHOLD_LOW,
+        weights=layer4_head["weights"],
         monitor_enable=True,
-        leak_enable=True, bias=-2,
+        leak_enable=True, bias=layer4_head["bias"],
     )
 
     # ``monitor_enable`` emits pre-processed Layer-13 Spike events, whereas

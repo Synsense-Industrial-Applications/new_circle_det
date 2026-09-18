@@ -10,7 +10,8 @@ Features:
 * timestamp-accurate playback from 0.01x to 20x;
 * play/pause, restart, previous/next event and exact event-number jump;
 * draggable progress, loop range, event-density timeline;
-* configurable trail, exponential time fading and glow intensity.
+* configurable trail, exponential time fading and glow intensity;
+* switch between all channels, channels 0..7, and channels 8..15.
 """
 
 from __future__ import annotations
@@ -58,6 +59,17 @@ FEATURE_TO_DIRECTION = np.asarray(
     dtype=np.int8,
 )
 LAYER4_FEATURE_COUNT = len(FEATURE_TO_DIRECTION)
+CHANNEL_GROUP_ALL = "all"
+CHANNEL_GROUP_LOW = "0-7"
+CHANNEL_GROUP_HIGH = "8-15"
+CHANNEL_GROUP_LABELS = {
+    CHANNEL_GROUP_ALL: "全部通道",
+    CHANNEL_GROUP_LOW: "通道 0–7",
+    CHANNEL_GROUP_HIGH: "通道 8–15",
+}
+CHANNEL_GROUP_FROM_LABEL = {
+    label: key for key, label in CHANNEL_GROUP_LABELS.items()
+}
 ARROW_VECTORS = (
     (1, 1),
     (-1, 1),
@@ -95,6 +107,19 @@ def _field(fields, *names):
         if name in fields:
             return fields[name]
     return None
+
+
+def channel_group_mask(features, channel_group):
+    """Return which Layer-4 features belong to the selected channel bank."""
+
+    features = np.asarray(features)
+    if channel_group == CHANNEL_GROUP_ALL:
+        return np.ones(features.shape, dtype=bool)
+    if channel_group == CHANNEL_GROUP_LOW:
+        return (features >= 0) & (features <= 7)
+    if channel_group == CHANNEL_GROUP_HIGH:
+        return (features >= 8) & (features <= 15)
+    raise ValueError(f"Unknown channel group: {channel_group}")
 
 
 def load_event_csv(path):
@@ -167,6 +192,10 @@ def load_event_csv(path):
             xs = (raw_x * 2 + (feature_mod4 // 2) % 2).astype(np.int16)
             ys = (raw_y * 2 + feature_mod4 % 2).astype(np.int16)
             source_shape = "64x64x16 -> 128x128 four-direction flow"
+    else:
+        # Already-decoded CSV files do not carry a Layer-4 channel.  Keeping
+        # one aligned sentinel array makes the playback arrays unambiguous.
+        features = np.full(len(timestamps), -1, dtype=np.int16)
 
     invalid = (xs < 0) | (xs >= IMAGE_SIZE) | (ys < 0) | (ys >= IMAGE_SIZE)
     if np.any(invalid):
@@ -182,6 +211,7 @@ def load_event_csv(path):
         xs[order],
         ys[order],
         directions[order],
+        features[order],
         source_shape,
     )
 
@@ -196,6 +226,8 @@ def build_event_rgb(
     trail_us,
     fade_tau_us,
     gain,
+    features=None,
+    channel_group=CHANNEL_GROUP_ALL,
 ):
     """Render one 128x128 RGB frame and return it with the visible count."""
 
@@ -204,13 +236,21 @@ def build_event_rgb(
         np.searchsorted(timestamps, current_timestamp - trail_us, side="left")
     )
     recent = slice(first, index + 1)
-    age_us = current_timestamp - timestamps[recent]
+    if features is None:
+        recent_features = np.full(index - first + 1, -1, dtype=np.int16)
+    else:
+        features = np.asarray(features)
+        if len(features) != len(timestamps):
+            raise ValueError("features must have the same length as timestamps")
+        recent_features = features[recent]
+    visible = channel_group_mask(recent_features, channel_group)
+    age_us = current_timestamp - timestamps[recent][visible]
     weights = np.exp(-age_us / max(float(fade_tau_us), 1.0)).astype(
         np.float32
     )
-    recent_x = xs[recent].astype(np.int32)
-    recent_y = ys[recent].astype(np.int32)
-    recent_directions = directions[recent].astype(np.int32)
+    recent_x = xs[recent][visible].astype(np.int32)
+    recent_y = ys[recent][visible].astype(np.int32)
+    recent_directions = directions[recent][visible].astype(np.int32)
 
     heat = np.zeros((4, IMAGE_SIZE, IMAGE_SIZE), dtype=np.float32)
     for dx, dy, kernel_weight in GLOW_KERNEL:
@@ -241,7 +281,7 @@ def build_event_rgb(
         optimize=True,
     )
     rgb += np.asarray((3.0, 6.0, 10.0), dtype=np.float32)
-    return np.clip(rgb, 0, 255).astype(np.uint8), index - first + 1
+    return np.clip(rgb, 0, 255).astype(np.uint8), int(np.count_nonzero(visible))
 
 
 def format_duration(value_us):
@@ -263,13 +303,19 @@ class EventStreamPlayer:
         fade_tau_ms=50.0,
         gain=1.0,
         autoplay=False,
+        channel_group=CHANNEL_GROUP_ALL,
     ):
+        if channel_group not in CHANNEL_GROUP_LABELS:
+            raise ValueError(f"Unknown channel group: {channel_group}")
         self.root = root
         self.event_path = None
         self.timestamps = np.asarray([], dtype=np.int64)
         self.xs = np.asarray([], dtype=np.int16)
         self.ys = np.asarray([], dtype=np.int16)
         self.directions = np.asarray([], dtype=np.int8)
+        self.features = np.asarray([], dtype=np.int16)
+        self.has_feature_channels = False
+        self.channel_group = channel_group
         self.source_shape = ""
         self.index = 0
         self.playback_timestamp = 0.0
@@ -296,6 +342,9 @@ class EventStreamPlayer:
         self.trail_var = tk.DoubleVar(value=max(5.0, float(persistence_ms)))
         self.fade_var = tk.DoubleVar(value=max(1.0, float(fade_tau_ms)))
         self.gain_var = tk.DoubleVar(value=max(0.05, float(gain)))
+        self.channel_group_var = tk.StringVar(
+            value=CHANNEL_GROUP_LABELS[self.channel_group]
+        )
         self.trail_text = tk.StringVar()
         self.fade_text = tk.StringVar()
         self.gain_text = tk.StringVar()
@@ -363,6 +412,25 @@ class EventStreamPlayer:
         )
         self.speed_combo.pack(side=tk.LEFT)
         self.speed_combo.bind("<<ComboboxSelected>>", self.on_speed_change)
+
+        channel_frame = ttk.LabelFrame(
+            toolbar,
+            text="通道显示",
+            padding=(6, 2),
+        )
+        channel_frame.pack(side=tk.LEFT, padx=(18, 0))
+        self.channel_group_buttons = []
+        for key in (CHANNEL_GROUP_ALL, CHANNEL_GROUP_LOW, CHANNEL_GROUP_HIGH):
+            button = ttk.Radiobutton(
+                channel_frame,
+                text=CHANNEL_GROUP_LABELS[key],
+                value=CHANNEL_GROUP_LABELS[key],
+                variable=self.channel_group_var,
+                command=self.on_channel_group_change,
+            )
+            button.pack(side=tk.LEFT, padx=3)
+            self.channel_group_buttons.append(button)
+
         ttk.Label(
             toolbar,
             text="空格：播放/暂停   ←/→：单事件   +/-：调速",
@@ -434,7 +502,6 @@ class EventStreamPlayer:
             0.05,
             8.0,
         )
-
         loop_frame = ttk.LabelFrame(sidebar, text="区间循环", padding=10)
         loop_frame.pack(fill=tk.X, pady=(10, 0))
         self.loop_check = ttk.Checkbutton(
@@ -543,6 +610,11 @@ class EventStreamPlayer:
             self.loop_apply_button,
         ):
             widget.configure(state=state)
+        channel_state = (
+            "normal" if loaded and self.has_feature_channels else "disabled"
+        )
+        for button in self.channel_group_buttons:
+            button.configure(state=channel_state)
 
     def choose_file(self):
         path = filedialog.askopenfilename(
@@ -560,6 +632,7 @@ class EventStreamPlayer:
                 xs,
                 ys,
                 directions,
+                features,
                 source_shape,
             ) = load_event_csv(path)
         except Exception as error:
@@ -571,6 +644,15 @@ class EventStreamPlayer:
         self.xs = xs
         self.ys = ys
         self.directions = directions
+        self.features = features
+        self.has_feature_channels = bool(
+            len(self.features) and np.all(self.features >= 0)
+        )
+        if not self.has_feature_channels:
+            self.channel_group = CHANNEL_GROUP_ALL
+            self.channel_group_var.set(
+                CHANNEL_GROUP_LABELS[CHANNEL_GROUP_ALL]
+            )
         self.source_shape = source_shape
         self.index = 0
         self.playback_timestamp = float(self.timestamps[0])
@@ -653,6 +735,18 @@ class EventStreamPlayer:
 
     def on_display_change(self, _value=None):
         self._update_display_labels()
+        if len(self.timestamps):
+            self.draw_event_canvas()
+            self.update_info()
+
+    def on_channel_group_change(self, _event=None):
+        selected = CHANNEL_GROUP_FROM_LABEL.get(self.channel_group_var.get())
+        if selected is None:
+            self.channel_group_var.set(
+                CHANNEL_GROUP_LABELS[self.channel_group]
+            )
+            return
+        self.channel_group = selected
         if len(self.timestamps):
             self.draw_event_canvas()
             self.update_info()
@@ -836,6 +930,8 @@ class EventStreamPlayer:
             self.trail_var.get() * 1000.0,
             self.fade_var.get() * 1000.0,
             self.gain_var.get(),
+            self.features,
+            self.channel_group,
         )
         ppm = f"P6\n{IMAGE_SIZE} {IMAGE_SIZE}\n255\n".encode("ascii") + rgb.tobytes()
         if self.base_photo is None:
@@ -881,6 +977,32 @@ class EventStreamPlayer:
             outline="#607086",
         )
 
+        if self._event_matches_channel_group(self.index):
+            self._draw_current_event_marker(canvas, left, top, scale)
+        canvas.create_text(
+            left + 5,
+            top + 5,
+            text="(0, 0)",
+            fill="#aab7c4",
+            anchor="nw",
+        )
+        canvas.create_text(
+            left + image_width - 5,
+            top + image_height - 5,
+            text="(127, 127)",
+            fill="#aab7c4",
+            anchor="se",
+        )
+
+    def _event_matches_channel_group(self, index):
+        if not self.has_feature_channels:
+            return True
+        return bool(channel_group_mask(
+            self.features[index:index + 1],
+            self.channel_group,
+        )[0])
+
+    def _draw_current_event_marker(self, canvas, left, top, scale):
         x_value = int(self.xs[self.index])
         y_value = int(self.ys[self.index])
         direction = int(self.directions[self.index])
@@ -906,20 +1028,6 @@ class EventStreamPlayer:
             width=max(2, scale // 2),
             arrow=tk.LAST,
         )
-        canvas.create_text(
-            left + 5,
-            top + 5,
-            text="(0, 0)",
-            fill="#aab7c4",
-            anchor="nw",
-        )
-        canvas.create_text(
-            left + image_width - 5,
-            top + image_height - 5,
-            text="(127, 127)",
-            fill="#aab7c4",
-            anchor="se",
-        )
 
     def update_info(self):
         if not len(self.timestamps):
@@ -927,6 +1035,12 @@ class EventStreamPlayer:
         relative_us = int(self.playback_timestamp - self.timestamps[0])
         duration_us = int(self.timestamps[-1] - self.timestamps[0])
         direction = int(self.directions[self.index])
+        feature = int(self.features[self.index])
+        channel_text = str(feature) if feature >= 0 else "CSV 未提供"
+        group_text = CHANNEL_GROUP_LABELS[self.channel_group]
+        current_visibility = (
+            "显示" if self._event_matches_channel_group(self.index) else "已过滤"
+        )
         self.info_var.set(
             f"文件：{self.event_path.name}\n"
             f"数据源：{self.source_shape}\n"
@@ -936,8 +1050,10 @@ class EventStreamPlayer:
             f"最近事件：{self.index + 1:,}\n"
             f"时间戳：{int(self.timestamps[self.index])}\n"
             f"位置：({int(self.xs[self.index])}, {int(self.ys[self.index])})\n"
+            f"通道：{channel_text}（当前事件{current_visibility}）\n"
             f"方向：c={direction}  {FLOW_DIRECTION_NAMES[direction]}\n"
-            f"拖尾内事件：{self.visible_count:,}"
+            f"显示范围：{group_text}\n"
+            f"拖尾内显示事件：{self.visible_count:,}"
         )
 
     def draw_density_timeline(self):
@@ -1085,6 +1201,12 @@ def parse_args(argv=None):
         help="exponential fade time constant in milliseconds",
     )
     parser.add_argument("--gain", type=float, default=1.0)
+    parser.add_argument(
+        "--channel-group",
+        choices=tuple(CHANNEL_GROUP_LABELS),
+        default=CHANNEL_GROUP_ALL,
+        help="initial visible channels: all, 0-7, or 8-15",
+    )
     parser.add_argument("--autoplay", action="store_true")
     return parser.parse_args(argv)
 
@@ -1100,6 +1222,7 @@ def main(argv=None):
         fade_tau_ms=args.fade_tau_ms,
         gain=args.gain,
         autoplay=args.autoplay,
+        channel_group=args.channel_group,
     )
     root.mainloop()
 

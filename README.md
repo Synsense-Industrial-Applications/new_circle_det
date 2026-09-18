@@ -16,6 +16,7 @@
 | 文件 | 用途 |
 |---|---|
 | [`algorithm_Demo/Demo_SNN.py`](algorithm_Demo/Demo_SNN.py) | SNN 网络、层配置和 Layer-4 输出 |
+| [`algorithm_Demo/layer4_weights.py`](algorithm_Demo/layer4_weights.py) | Layer-4 输出头的多套 weights（switch 按下标选） |
 | [`algorithm_Demo/Demo_algorithm.py`](algorithm_Demo/Demo_algorithm.py) | 实时圆检测、过滤、击球回放和主循环 |
 | [`algorithm_Demo/Demo_record.py`](algorithm_Demo/Demo_record.py) | 录制 Layer-4，可选同步录制原始 DVS |
 | [`algorithm_Demo/DS_Demo.py`](algorithm_Demo/DS_Demo.py) | 时间衰减 D/S 圆心检测实时 Demo |
@@ -29,6 +30,7 @@
 new_circle_det/
 ├─ algorithm_Demo/             # SNN、Speck2f 实时程序和录制数据
 │  ├─ Demo_SNN.py              # 当前 SNN 网络与硬件配置
+│  ├─ layer4_weights.py        # Layer-4 输出头多套 weights（直接写出）
 │  ├─ Demo_algorithm.py        # 圆检测算法与实时运行入口
 │  ├─ Demo_record.py           # Layer-4 / DVS 录制
 │  ├─ DS_Demo.py               # D/S 圆心检测
@@ -93,6 +95,19 @@ python algorithm_Demo/Demo_algorithm.py
 加载当前 SNN，再执行圆检测、过滤、日志和击球回放。网络和硬件参数说明见
 [`algorithm_Demo/README.md`](algorithm_Demo/README.md)。
 
+Layer-4 输出头的 weights（含配套的 `threshold_high` / `bias`）由
+[`algorithm_Demo/layer4_weights.py`](algorithm_Demo/layer4_weights.py)
+中的多套权重提供，用 switch（下标）选择；`threshold_low` 手动输入。两处都在
+[`algorithm_Demo/Demo_SNN.py`](algorithm_Demo/Demo_SNN.py) 顶部指定：
+
+```python
+LAYER4_WEIGHT_INDEX = 0        # switch：0=diag3, 1=tangent3, 2=diag5, 3=diag5_long
+LAYER4_THRESHOLD_LOW = -1      # 手动输入
+```
+
+`Demo_algorithm.py`、`Demo_record.py`、`DS_Demo.py` 都自动使用这份 weights，
+不需要额外参数。
+
 ### 2. 录制 Layer-4 和 DVS
 
 只保存 Layer-4：
@@ -117,6 +132,8 @@ python offline_tools/event_stream_player.py data/samples/layer4_20260727_155031_
 ```
 
 播放器按照事件时间戳推进，支持暂停、调速、事件序号跳转、区间循环和时间渐隐。
+界面中的“通道显示”可以在全部通道、`0–7` 和 `8–15` 三种视图之间切换；
+切换只过滤画面，不改变完整事件流的播放时间和事件序号。
 
 ### 4. 离线查看圆检测结果
 
