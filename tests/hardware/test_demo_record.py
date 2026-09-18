@@ -11,8 +11,11 @@ from unittest.mock import patch
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
+PROJECT_ROOT = SCRIPT_DIR.parents[1]
+ALGORITHM_DIR = PROJECT_ROOT / "algorithm_Demo"
+for path in (ALGORITHM_DIR, PROJECT_ROOT):
+    if str(path) not in sys.path:
+        sys.path.insert(0, str(path))
 
 
 class FakeDvsEvent:
@@ -28,21 +31,24 @@ def load_recorder_module():
     fake_samna.speck2f = SimpleNamespace(
         event=SimpleNamespace(DvsEvent=FakeDvsEvent)
     )
-    fake_demo = ModuleType("Demo")
-    fake_demo.config = SimpleNamespace(
+    fake_snn = ModuleType("Demo_SNN")
+    fake_snn.config = SimpleNamespace(
         dvs_layer=SimpleNamespace(raw_monitor_enable=False)
     )
-    fake_demo.configure_cnn_pipeline = lambda **_kwargs: None
-    fake_demo.layer_4 = 2
-    fake_demo.open_speck2f_dev_kit = lambda: None
-    fake_demo.visualize_layer = lambda *_args: (None, None)
-    fake_demo.visualize_raw_dvs = lambda *_args: (None, None)
+    fake_snn.configure_cnn_pipeline = lambda **_kwargs: None
+    fake_snn.layer_4 = 2
+    fake_snn.open_speck2f_dev_kit = lambda: None
+    fake_snn.visualize_layer = lambda *_args: (None, None)
+    fake_snn.visualize_raw_dvs = lambda *_args: (None, None)
 
     spec = importlib.util.spec_from_file_location(
-        "Demo_record_under_test", SCRIPT_DIR / "Demo_record.py"
+        "Demo_record_under_test", ALGORITHM_DIR / "Demo_record.py"
     )
     module = importlib.util.module_from_spec(spec)
-    with patch.dict(sys.modules, {"samna": fake_samna, "Demo": fake_demo}):
+    with patch.dict(
+        sys.modules,
+        {"samna": fake_samna, "Demo_SNN": fake_snn},
+    ):
         spec.loader.exec_module(module)
     return module
 
@@ -115,7 +121,7 @@ class DemoRecordTests(unittest.TestCase):
             self.assertTrue(self.recorder.choose_dvs_recording())
 
     def test_demo_configuration_owns_the_raw_monitor_switch(self):
-        source = (SCRIPT_DIR / "Demo.py").read_text(encoding="utf-8")
+        source = (ALGORITHM_DIR / "Demo_SNN.py").read_text(encoding="utf-8")
         self.assertIn(
             "def configure_cnn_pipeline(raw_dvs_monitor=False):",
             source,
@@ -128,7 +134,7 @@ class DemoRecordTests(unittest.TestCase):
             "config.factory_config.monitor_dual_channel = bool(raw_dvs_monitor)",
             source,
         )
-        recorder_source = (SCRIPT_DIR / "Demo_record.py").read_text(
+        recorder_source = (ALGORITHM_DIR / "Demo_record.py").read_text(
             encoding="utf-8"
         )
         self.assertIn(
@@ -141,7 +147,7 @@ class DemoRecordTests(unittest.TestCase):
         self.assertEqual(self.recorder.RECORDER_INTERFACE_CLOCK_HZ, 25_000_000)
 
     def test_visualization_routes_filter_event_types_before_conversion(self):
-        source = (SCRIPT_DIR / "Demo.py").read_text(encoding="utf-8")
+        source = (ALGORITHM_DIR / "Demo_SNN.py").read_text(encoding="utf-8")
         self.assertIn(
             'event_type_filter.set_desired_type("speck2f::event::Spike")',
             source,
@@ -152,7 +158,7 @@ class DemoRecordTests(unittest.TestCase):
         )
 
     def test_split_network_keeps_the_64_by_64_by_16_output_contract(self):
-        source = (SCRIPT_DIR / "Demo.py").read_text(encoding="utf-8")
+        source = (ALGORITHM_DIR / "Demo_SNN.py").read_text(encoding="utf-8")
         compact = " ".join(source.split())
         self.assertIn("SHIFT_OUT_SIZE = 2", source)
         self.assertIn(
@@ -181,6 +187,17 @@ class DemoRecordTests(unittest.TestCase):
         )
         self.assertEqual(self.recorder.LAYER4_SOURCE_SIZE, 64)
         self.assertEqual(self.recorder.LAYER4_FEATURE_COUNT, 16)
+
+    def test_snn_and_circle_runtime_are_separate_modules(self):
+        snn_source = (ALGORITHM_DIR / "Demo_SNN.py").read_text(encoding="utf-8")
+        algorithm_source = (ALGORITHM_DIR / "Demo_algorithm.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("CircleDetectionPipeline", snn_source)
+        self.assertNotIn("def main(", snn_source)
+        self.assertIn("from Demo_SNN import", algorithm_source)
+        self.assertIn("CircleDetectionPipeline", algorithm_source)
+        self.assertIn("def main(", algorithm_source)
 
 
 if __name__ == "__main__":

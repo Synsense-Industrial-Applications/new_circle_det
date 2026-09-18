@@ -1,6 +1,6 @@
 """Real-time time-decayed D/S centre-vote demo for the current Layer-4 SNN.
 
-The hardware/network configuration is imported from ``Demo.py`` so there is
+The hardware/network configuration is imported from ``Demo_SNN.py`` so there is
 only one SNN definition to maintain.  Every decoded Layer-4 event updates one
 exponentially decayed D/S histogram bin and immediately recalculates the D/S
 peaks.  There is no fixed-count detection window.
@@ -26,7 +26,7 @@ therefore not continuously redrawn.  The fixed cue-head reference defaults to
 
 The UI uses Tk (Python standard library) and runs in the main thread.  A second
 samnagui process displays the raw Layer-4 activity through the existing samna
-route from ``Demo.py``.  Hardware reading and D/S calculation run in a worker
+route from ``Demo_SNN.py``.  Hardware reading and D/S calculation run in a worker
 thread.  A one-element queue keeps only the newest snapshot, so a burst of
 events cannot build a rendering backlog.  The implementation contains no
 Windows-only input or display API and runs on Linux when Tk, NumPy, samna and
@@ -558,7 +558,7 @@ class HardwareWorker(threading.Thread):
             # Delay hardware imports so --help and offline algorithm tests work
             # on development machines without the Speck2f runtime installed.
             import samna
-            from Demo import (
+            from Demo_SNN import (
                 config,
                 configure_cnn_pipeline,
                 layer_4,

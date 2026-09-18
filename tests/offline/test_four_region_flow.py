@@ -7,11 +7,11 @@ import unittest
 
 import numpy as np
 
-from event_stream_player import (
+from offline_tools.event_stream_player import (
     FEATURE_TO_DIRECTION as PLAYER_FEATURE_TO_DIRECTION,
     load_event_csv,
 )
-from four_region_flow import FEATURE_TO_DIRECTION, load_flow_csv
+from offline_tools.four_region_flow import FEATURE_TO_DIRECTION, load_flow_csv
 
 
 class FourRegionFlowTests(unittest.TestCase):

@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from circle_detection.detector import FlowEvent
-from four_region_flow import FlowData
-from visualize_circle_detection import (
+from offline_tools.four_region_flow import FlowData
+from offline_tools.visualize_circle_detection import (
     DSCTEventPlayer,
     PLAYBACK_SPEED_PRESETS,
     make_configs,
@@ -45,7 +45,7 @@ class PlaybackSpeedTests(unittest.TestCase):
         precomputed = precompute_detections(
             events, strict, adaptive, show_progress=False
         )
-        with patch("visualize_circle_detection.time.perf_counter", return_value=10.0):
+        with patch("offline_tools.visualize_circle_detection.time.perf_counter", return_value=10.0):
             player = DSCTEventPlayer(
                 data,
                 events,
@@ -64,7 +64,7 @@ class PlaybackSpeedTests(unittest.TestCase):
             # The small offset avoids an artificial float boundary at exactly
             # 20,000 integer microseconds.
             with patch(
-                "visualize_circle_detection.time.perf_counter", return_value=10.02005
+                "offline_tools.visualize_circle_detection.time.perf_counter", return_value=10.02005
             ):
                 player._timer_tick(0)
             self.assertEqual(player.index, 200)
@@ -73,11 +73,11 @@ class PlaybackSpeedTests(unittest.TestCase):
             # Changing to 2x preserves the current source time. The following
             # 10 ms of wall time advances another 20 ms in the recording.
             with patch(
-                "visualize_circle_detection.time.perf_counter", return_value=10.02005
+                "offline_tools.visualize_circle_detection.time.perf_counter", return_value=10.02005
             ):
                 player.speed_slider.set_val(PLAYBACK_SPEED_PRESETS.index(2.0))
             with patch(
-                "visualize_circle_detection.time.perf_counter", return_value=10.03005
+                "offline_tools.visualize_circle_detection.time.perf_counter", return_value=10.03005
             ):
                 player._timer_tick(1)
             self.assertEqual(player.index, 400)
@@ -87,7 +87,7 @@ class PlaybackSpeedTests(unittest.TestCase):
             self.assertEqual(active.stop, 401)
 
             with patch(
-                "visualize_circle_detection.time.perf_counter", return_value=10.03005
+                "offline_tools.visualize_circle_detection.time.perf_counter", return_value=10.03005
             ):
                 player.progress_slider.set_val(500)
             self.assertEqual(player.index, 499)
@@ -103,7 +103,7 @@ class PlaybackSpeedTests(unittest.TestCase):
             # timestamps. Here 11.05 ms from index 100 wraps 1.05 ms into the
             # 100..200 interval, landing on index 110.
             with patch(
-                "visualize_circle_detection.time.perf_counter", return_value=20.0
+                "offline_tools.visualize_circle_detection.time.perf_counter", return_value=20.0
             ):
                 player.loop_slider.set_val((101, 201))
                 player._toggle_loop()
@@ -113,7 +113,7 @@ class PlaybackSpeedTests(unittest.TestCase):
             self.assertEqual(player.index, 100)
 
             with patch(
-                "visualize_circle_detection.time.perf_counter", return_value=20.01105
+                "offline_tools.visualize_circle_detection.time.perf_counter", return_value=20.01105
             ):
                 player._timer_tick(2)
             self.assertEqual(player.index, 110)

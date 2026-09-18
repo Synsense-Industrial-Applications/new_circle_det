@@ -1,7 +1,7 @@
 """Temporary, low-overhead CSV logging for real-machine playback measurements.
 
 Delete this file and the small ``performance_logger`` hooks in
-``visualize_circle_detection.py`` after the measurements are collected.
+``offline_tools/visualize_circle_detection.py`` after the measurements are collected.
 """
 
 from __future__ import annotations

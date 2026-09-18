@@ -128,8 +128,8 @@ class XiaoironConfidenceTests(unittest.TestCase):
         self.assertEqual(neutral.xiaoiron_confidence, 0.4)
 
     def test_output_cache_and_display_threshold(self):
-        from four_region_flow import FlowData
-        from visualize_circle_detection import (
+        from offline_tools.four_region_flow import FlowData
+        from offline_tools.visualize_circle_detection import (
             to_flow_events, make_configs, precompute_detections,
             save_precomputed_cache, load_precomputed_cache, DSCTEventPlayer,
         )

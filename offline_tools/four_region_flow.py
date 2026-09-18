@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Decode the 13-point four-region Layer-4 event representation.
 
-This module deliberately mirrors ``event_stream_player.py``. The source
+This module deliberately mirrors ``offline_tools/event_stream_player.py``. The source
 address is 64x64 and feature 0..15 contains two spatial-kernel banks.  Both
 banks retain the original 2x2 sub-pixel address and four-direction flow code.
 """

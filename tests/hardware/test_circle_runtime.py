@@ -9,8 +9,9 @@ import unittest
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent
-for path in (SCRIPT_DIR, PROJECT_ROOT):
+PROJECT_ROOT = SCRIPT_DIR.parents[1]
+ALGORITHM_DIR = PROJECT_ROOT / "algorithm_Demo"
+for path in (ALGORITHM_DIR, PROJECT_ROOT):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 

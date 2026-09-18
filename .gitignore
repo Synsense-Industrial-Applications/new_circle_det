@@ -29,5 +29,7 @@ Thumbs.db
 
 # Local backup files
 .backup_before_*/
+.local_backups/
+.local_cache/
 *.bak
 *~

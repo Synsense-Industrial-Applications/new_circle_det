@@ -35,7 +35,7 @@ except ImportError:  # Direct execution/import from algorithm_Demo/.
 
 # Layer-4 feature -> four diagonal optical-flow directions.  The second bank
 # of eight features repeats the direction/address mapping while using the
-# complementary spatial kernel configured in Demo.py.
+# complementary spatial kernel configured in Demo_SNN.py.
 DIRECTION_ANGLES_DEG = {0: 45.0, 1: 135.0, 2: 225.0, 3: 315.0}
 
 
@@ -213,7 +213,7 @@ def _center_y_filter(
 
 
 # Evaluation order is explicit and stable.  New conditions only need a named
-# evaluator plus one registry entry here (or in Demo.py's custom tuple).
+# evaluator plus one registry entry here (or in Demo_algorithm.py's custom tuple).
 DEFAULT_CIRCLE_FILTERS: tuple[CircleFilterRule, ...] = (
     CircleFilterRule("confidence", _confidence_filter),
     CircleFilterRule("radius", _radius_filter),

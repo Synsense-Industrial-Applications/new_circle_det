@@ -1,8 +1,20 @@
 # 硬件实时圆检测 Demo
 
-`Demo.py` 使用 `optical_flow_split_d_on_off_3_k_conv.py` 的 split-D
-前级网络：输入层采用 3x3 卷积，两级方向核采用无损裁剪后的 2x2 最小核。
-实时识别部分使用项目上级 `circle_detection/AdaptiveCircleDetector` 的最新方法。
+当前硬件程序已经拆成两个独立模块：
+
+- **`Demo_SNN.py`**：只保存 Speck2f SNN 网络、各层连接、Layer-4 输出、
+  设备打开和 samnagui 可视化连接；
+- **`Demo_algorithm.py`**：保存圆检测参数、过滤、终端状态、击球回放、
+  运行日志和可执行主循环。
+
+`Demo_SNN.py` 使用 `optical_flow_split_d_on_off_3_k_conv.py` 中的 split-D
+设计作为网络结构参考：输入层采用 3x3 卷积，两级方向核采用无损裁剪后的
+2x2 最小核。`Demo_algorithm.py` 使用项目上级
+`circle_detection/AdaptiveCircleDetector` 的最新方法。
+
+`Demo_SNN.py` 是配置模块，不单独启动事件循环。`Demo_algorithm.py`、
+`Demo_record.py` 和 `DS_Demo.py` 都从它导入同一份网络配置，因此三条运行路径
+不会各自维护一份 SNN。
 
 ## 数据流
 
@@ -29,7 +41,9 @@ Layer-4 的最终接口仍为 `64x64x16`。`0..7` 是第一组光流输出通道
 
 ## 调整参数
 
-常用参数集中在 `Demo.py` 开头：
+网络结构、卷积核、阈值、层编号和监控开关在 `Demo_SNN.py` 中修改。
+
+圆检测常用参数集中在 `Demo_algorithm.py` 开头：
 
 - `CIRCLE_FILTER_CONFIG`：输出置信度、半径和圆心范围；
 - `SCORE_WINDOW_EVENTS`、`XIAOIRON_CONFIDENCE_CONFIG`：对应离线播放器中的
@@ -75,13 +89,13 @@ Matplotlib 进程以0.2倍速播放。实时采集和圆检测不会等待回放
 连接 Speck2f 硬件并准备好 `samna` / `samnagui` 后，在项目根目录运行：
 
 ```powershell
-python algorithm_Demo\Demo.py
+python algorithm_Demo\Demo_algorithm.py
 ```
 
 硬件无关的解码、过滤边界和输出去重测试：
 
 ```powershell
-python -m unittest algorithm_Demo.test_circle_runtime -v
+python -m unittest discover -s tests/hardware -t . -p "test_*.py" -v
 ```
 
 终端中的 `CANDIDATE` 是调参诊断；只有 `OUTPUT ACCEPT` 或

@@ -1,7 +1,7 @@
 """Temporary structured logging for the real Speck2f hardware demo.
 
 The logger intentionally lives outside the detector implementation.  Removing
-this file and the small calls in ``Demo.py`` completely removes the diagnostic
+this file and the small calls in ``Demo_algorithm.py`` completely removes the diagnostic
 instrumentation once the measurements are finished.
 
 One run creates one directory containing reconstructable Layer-4 events,
@@ -201,7 +201,7 @@ class _CsvSink:
 
 
 class HardwareRuntimeLogger:
-    """Buffered, dependency-free logger for ``algorithm_Demo/Demo.py``."""
+    """Buffered, dependency-free logger for ``algorithm_Demo/Demo_algorithm.py``."""
 
     def __init__(
         self,
@@ -251,7 +251,7 @@ class HardwareRuntimeLogger:
         )
         self._write_readme()
         self.record_metadata({})
-        self.record_marker("session_start", "Demo.py started")
+        self.record_marker("session_start", "Demo_algorithm.py started")
         atexit.register(self.close)
 
     def _base(self) -> tuple[str, str, str]:
@@ -586,7 +586,7 @@ class HardwareRuntimeLogger:
     def close(self) -> None:
         if self._closed:
             return
-        self.record_marker("session_end", "Demo.py stopped")
+        self.record_marker("session_end", "Demo_algorithm.py stopped")
         self.flush()
         elapsed_s = time.perf_counter() - self._started_perf
         summary = {

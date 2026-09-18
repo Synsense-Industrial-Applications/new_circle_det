@@ -3,12 +3,20 @@ import argparse
 import ast
 import json
 from pathlib import Path
+import sys
 import time
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-import visualize_circle_detection as player_module
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from offline_tools import visualize_circle_detection as player_module
 
 
 def main():
@@ -17,8 +25,9 @@ def main():
     parser.add_argument("--reuse-cache", action="store_true",
                         help="Reuse matching current-version scores for notebook/layout rechecks")
     args = parser.parse_args()
-    root = Path(__file__).resolve().parent
-    nb = json.loads((root/"circle_detection_step_by_step.ipynb").read_text(encoding="utf-8"))
+    root = PROJECT_ROOT
+    notebook_path = root / "notebooks" / "circle_detection_step_by_step.ipynb"
+    nb = json.loads(notebook_path.read_text(encoding="utf-8"))
     code = ["".join(c["source"]) for c in nb["cells"] if c["cell_type"] == "code"]
     for cell in code:
         ast.parse(cell)
@@ -43,7 +52,7 @@ def main():
     started = time.perf_counter()
     signature = player_module._cache_signature(
         ns["CSV_PATH"], len(events), strict_config, adaptive_config)
-    cache = root / (
+    cache = ns["CSV_PATH"].with_name(
         ns["CSV_PATH"].stem
         + f".circle_cache_v{player_module.CACHE_FORMAT_VERSION}.npz"
     )
@@ -59,7 +68,9 @@ def main():
     finite = np.isfinite(new)
     # Reproducing old geometry/score proves the added score isn't changing the
     # old reference being compared on screen.
-    old_path = args.project/(ns["CSV_PATH"].stem+".circle_cache_v2.npz")
+    old_path = args.project / ".local_cache" / (
+        ns["CSV_PATH"].stem + ".circle_cache_v2.npz"
+    )
     original_equal = None
     if old_path.exists():
         with np.load(old_path) as old:
@@ -95,7 +106,9 @@ def main():
         original_equal_v2=original_equal,
     )
     print(json.dumps(report, indent=2), flush=True)
-    (root/"xiaoiron_validation.json").write_text(
+    output_dir = root / "artifacts" / "previews"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "xiaoiron_validation.json").write_text(
         json.dumps(report, indent=2), encoding="utf-8"
     )
 
@@ -112,7 +125,7 @@ def main():
             box = ui.info_text.get_window_extent(renderer)
             assert not box.overlaps(ui.ax_events.get_window_extent(renderer))
             assert not box.overlaps(ui.ax_sector.get_window_extent(renderer))
-            ui.figure.savefig(root/f"xiaoiron_{label}_preview.png", dpi=110)
+            ui.figure.savefig(output_dir / f"xiaoiron_{label}_preview.png", dpi=110)
             print(label, "event", idx+1, "full", full[idx], "xiaoiron", new[idx], flush=True)
     finally:
         plt.close(ui.figure)

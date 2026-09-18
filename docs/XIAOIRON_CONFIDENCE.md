@@ -139,5 +139,6 @@ v5奖励样例为第126,703个事件（full 0.454，新分数0.615），最大�
 新评分每次更新开销为O(W+16×4)，W为窗口事件数；默认每6事件一次。调试缓存另占O(N×16×4)存储，N为总事件数。
 
 在本目录运行 `python -m unittest discover` 可执行单元测试；运行
-`python verify_xiaoiron.py --project . --reuse-cache` 可复查Notebook计算与绘图cell、缓存及两个真实数据样例。
+`python scripts/verify_xiaoiron.py --project . --reuse-cache` 可复查 Notebook
+计算与绘图 cell、缓存及两个真实数据样例。
 去掉 `--reuse-cache` 会重新逐事件计算整个数据集。此验证脚本使用无界面的Agg后端，不弹出窗口。

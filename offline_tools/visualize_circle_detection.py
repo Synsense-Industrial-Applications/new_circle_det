@@ -2,7 +2,7 @@
 """Event-by-event circle detection for 13-point four-region optical flow.
 
 The source CSV stores a 64x64 address and a feature channel. It is decoded to
-(x, y, c, t) with the same mapping as ``event_stream_player.py``: the feature
+(x, y, c, t) with the same mapping as ``offline_tools/event_stream_player.py``: the feature
 identifies one point in a 2x2 sub-pixel block and one of four diagonal flow
 regions. Events are pushed to both detectors one at a time. Playback follows
 the source timestamps, and visible events use time-based exponential decay, so
@@ -56,13 +56,15 @@ from circle_detection.xiaoiron_confidence import (  # noqa: E402
     XiaoironConfig,
     calculate_xiaoiron_confidence,
 )
-from four_region_flow import FlowData, load_flow_csv  # noqa: E402
-from runtime_performance_log import RuntimePerformanceLogger  # noqa: E402
+from offline_tools.four_region_flow import FlowData, load_flow_csv  # noqa: E402
+from offline_tools.runtime_performance_log import RuntimePerformanceLogger  # noqa: E402
 
 
-DEFAULT_CSV = SCRIPT_DIR / "layer4_20260727_155031_part0001.csv"
+DEFAULT_CSV = (
+    REPOSITORY_ROOT / "data" / "samples" / "layer4_20260727_155031_part0001.csv"
+)
 
-# Exact direction convention from event_stream_player.py. Image coordinates
+# Exact direction convention from offline_tools/event_stream_player.py. Image coordinates
 # have +y down, so the vector angles are 45, 135, 225 and 315 degrees.
 DIRECTION_NAMES = {0: "down-right", 1: "down-left", 2: "up-left", 3: "up-right"}
 DIRECTION_SYMBOLS = {0: "↘", 1: "↙", 2: "↖", 3: "↗"}
@@ -2064,15 +2066,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--performance-log",
         type=Path,
-        default=Path("runtime_performance_log.csv"),
-        help="temporary CSV runtime log; relative paths are written beside this script",
+        default=Path("runtime_logs/runtime_performance_log.csv"),
+        help="temporary CSV runtime log; relative paths are resolved from project root",
     )
     parser.add_argument("--no-show", action="store_true")
     return parser
 
 
 def resolve_output(path: Path) -> Path:
-    return path if path.is_absolute() else SCRIPT_DIR / path
+    return path if path.is_absolute() else REPOSITORY_ROOT / path
 
 
 def main(argv: Optional[Iterable[str]] = None) -> int:

@@ -1,6 +1,6 @@
 """Record Speck2f Layer-4 events and, optionally, raw DVS events.
 
-The SNN/CNN configuration is imported from the current ``Demo.py`` so this
+The SNN/CNN configuration is imported from the current ``Demo_SNN.py`` so this
 recorder always uses the same network that is being tested.  Every 16-channel
 Layer-4 event is written directly to CSV as ``x,y,feature,timestamp``; no
 coordinate decoding, circle fitting, confidence scoring, tracking, or hit
@@ -43,9 +43,9 @@ else:
     import termios
     import tty
 
-# Import only the hardware/network objects from the user's current Demo.py.
-# Importing the module defines the network; it does not call Demo.main().
-from Demo import (
+# Import only the hardware/network objects from the user's current Demo_SNN.py.
+# Importing the module defines the network; it does not start a runtime loop.
+from Demo_SNN import (
     config,
     configure_cnn_pipeline,
     layer_4,
@@ -401,7 +401,7 @@ def record_layer4(record_dvs=False):
     """Record Layer-4 sessions and optional synchronized raw-DVS sessions."""
 
     output_dir = choose_recording_directory()
-    print("Configuring the SNN/CNN pipeline from Demo.py...")
+    print("Configuring the SNN/CNN pipeline from Demo_SNN.py...")
     # Raw monitoring is always required by the live DVS samnagui window.
     # ``record_dvs`` controls only whether those events are also saved to CSV.
     configure_cnn_pipeline(raw_dvs_monitor=True)
