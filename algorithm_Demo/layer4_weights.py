@@ -8,12 +8,14 @@ weights 就是一个函数，显式写出 `weights` 以及它配套的
 
 * **1x1 直通**（下标 0）：核为 `[[1]]` 的单个 tap，按输出 0..7 的通道对应方式
   直通，不做空间卷积，输出 8 通道；
-* **16 通道**（下标 1..4）：一个头输出 `64x64x16`，前 8 个通道用主斜率核，
-  后 8 个通道保持同一光流方向、换成互补斜率核；
-* **8 通道拆分**（下标 5..12）：把上面每套按输出通道 0..7 / 8..15 对半切开，
-  `_a` 是前 8 通道（主斜率核），`_b` 是后 8 通道（互补斜率核），
+* **16 通道**（下标 1..4、13）：一个头输出 `64x64x16`，前 8 个通道用主斜率
+  核，后 8 个通道保持同一光流方向、换成互补斜率核；
+* **8 通道拆分**（下标 5..12、14..15）：把上面每套按输出通道 0..7 / 8..15
+  对半切开，`_a` 是前 8 通道（主斜率核），`_b` 是后 8 通道（互补斜率核），
   配合两个 8 通道头使用。两半各自的 D/S 家族分组都不变，只是物理通道号
   从 0 开始。
+
+新加的整套 weights 一律追加到已有下标之后，避免旧下标搬家。
 
 `Demo_SNN.py` 用 `output_shape_feature=layer4_head["output_features"]` 决定
 该层输出多少通道。注意：下游 128x128 解码和圆检测按 `64x64x16` 设计，
@@ -46,13 +48,13 @@ except ImportError:  # 直接从 algorithm_Demo/ 运行或导入时
 DEFAULT_WEIGHT_INDEX = 0
 
 # switch 支持的下标个数（get_layer4_weights 的 if/elif 必须覆盖 0..WEIGHT_COUNT-1）。
-WEIGHT_COUNT = 13
+WEIGHT_COUNT = 16
 
-# 下标分组：0 是 1x1 直通；1..4 是 16 通道整头；5..12 是每套按输出通道
-# 0..7 / 8..15 拆开的 8 通道版本（_a = 前 8 通道，_b = 后 8 通道）。
+# 下标分组：0 是 1x1 直通；1..4、13 是 16 通道整头；5..12、14..15 是每套按
+# 输出通道 0..7 / 8..15 拆开的 8 通道版本（_a = 前 8 通道，_b = 后 8 通道）。
 DIRECT_WEIGHT_INDEX = 0
-FULL_WEIGHT_INDICES = (1, 2, 3, 4)
-SPLIT_WEIGHT_INDICES = tuple(range(5, WEIGHT_COUNT))
+FULL_WEIGHT_INDICES = (1, 2, 3, 4, 13)
+SPLIT_WEIGHT_INDICES = (5, 6, 7, 8, 9, 10, 11, 12, 14, 15)
 
 _INPUT_FEATURES = 8
 
@@ -301,8 +303,65 @@ def weights_diag5_long():
     }
 
 
-# ── 8 通道版本：把上面每套按输出通道 0..7（_a）和 8..15（_b）切开 ──
+def weights_diag7():
+    """下标 13：7x7 对角核，中心 2，半径 1/2/3 的对角 tap 各为 1；padding 改为 4。"""
 
+    kernel_main = np.array([
+        [1, 0, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 2, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0, 1],
+    ], dtype=np.int8)
+
+    kernel_anti = np.array([
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 2, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 0, 0],
+    ], dtype=np.int8)
+
+    weights = np.zeros((LAYER4_FEATURE_COUNT, _INPUT_FEATURES, 7, 7), dtype=np.int8)
+
+    # 右下、左上：空间方向都是 \
+    weights[0, 0] = kernel_main
+    weights[3, 1] = kernel_main
+    weights[4, 2] = kernel_main
+    weights[7, 3] = kernel_main
+
+    # 左下、右上：空间方向都是 /
+    weights[1, 4] = kernel_anti
+    weights[2, 5] = kernel_anti
+    weights[5, 6] = kernel_anti
+    weights[6, 7] = kernel_anti
+
+    # 第二组保持光流方向不变，但交换空间斜率。
+    weights[8, 0] = kernel_anti
+    weights[11, 1] = kernel_anti
+    weights[12, 2] = kernel_anti
+    weights[15, 3] = kernel_anti
+    weights[9, 4] = kernel_main
+    weights[10, 5] = kernel_main
+    weights[13, 6] = kernel_main
+    weights[14, 7] = kernel_main
+
+    return {
+        "name": "diag7",
+        "kernel_size": 7,
+        "padding": 4,
+        "output_features": LAYER4_FEATURE_COUNT,
+        "threshold_high": 5,
+        "bias": -4,
+        "weights": weights,
+    }
+
+
+# ── 8 通道版本：把上面每套按输出通道 0..7（_a）和 8..15（_b）切开 ──
 def weights_diag3_a():
     """下标 4：diag3 的前 8 通道（主斜率核），输出 8 通道。"""
 
@@ -383,6 +442,26 @@ def weights_diag5_long_b():
     return entry
 
 
+def weights_diag7_a():
+    """下标 14：diag7 的前 8 通道（主斜率核），输出 8 通道。"""
+
+    entry = weights_diag7()
+    entry["name"] = "diag7_a"
+    entry["output_features"] = _HALF_FEATURES
+    entry["weights"] = entry["weights"][:_HALF_FEATURES].copy()
+    return entry
+
+
+def weights_diag7_b():
+    """下标 15：diag7 的后 8 通道（互补斜率核），输出 8 通道。"""
+
+    entry = weights_diag7()
+    entry["name"] = "diag7_b"
+    entry["output_features"] = _HALF_FEATURES
+    entry["weights"] = entry["weights"][_HALF_FEATURES:].copy()
+    return entry
+
+
 def get_layer4_weights(index=DEFAULT_WEIGHT_INDEX):
     """switch：按下标返回一套 weights（含 kernel_size / padding / 输出通道数）。"""
 
@@ -413,6 +492,12 @@ def get_layer4_weights(index=DEFAULT_WEIGHT_INDEX):
         entry = weights_diag5_long_a()
     elif index == 12:
         entry = weights_diag5_long_b()
+    elif index == 13:
+        entry = weights_diag7()
+    elif index == 14:
+        entry = weights_diag7_a()
+    elif index == 15:
+        entry = weights_diag7_b()
     else:
         raise KeyError(
             f"未知的 Layer-4 weights 下标 {index}；"

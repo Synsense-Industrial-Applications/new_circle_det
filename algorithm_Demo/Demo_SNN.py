@@ -21,8 +21,8 @@ from speck_tools import ChannelHelper
 # ── Layer-4 输出头 ──
 # weights 及其配套的 output_features / threshold_high / bias 由 switch（下标）
 # 从 layer4_weights.py 取；threshold_low 手动输入。
-# 下标 0 是 1x1 直通（8 通道），1..4 输出 16 通道，5..12 是同一套按 0..7 /
-# 8..15 切开后的 8 通道版本。
+# 下标 0 是 1x1 直通（8 通道），1..4 和 13 输出 16 通道，5..12 和 14..15 是同
+# 一套按 0..7 / 8..15 切开后的 8 通道版本。
 LAYER4_WEIGHT_INDEX = 0        # 见 layer4_weights.format_weights_table()
 LAYER4_THRESHOLD_LOW = -1
 

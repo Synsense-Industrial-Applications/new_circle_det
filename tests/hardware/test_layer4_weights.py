@@ -284,6 +284,22 @@ class WeightDetailTests(unittest.TestCase):
         self.assertTrue(np.array_equal(tangent[8, 0], base[0, 0]))
         self.assertTrue(np.array_equal(tangent[9, 4], base[1, 4]))
 
+    def test_diag7_uses_seven_by_seven_with_padding_four(self):
+        entry = layer4_weights.get_layer4_weights(index_of("diag7"))
+        self.assertEqual(entry["kernel_size"], 7)
+        self.assertEqual(entry["padding"], 4)
+        self.assertEqual(entry["output_features"], 16)
+        self.assertEqual(entry["threshold_high"], 5)
+        self.assertEqual(entry["bias"], -4)
+        kernel = entry["weights"][0, 0]
+        for radius in range(7):
+            expected = 2 if radius == 3 else 1
+            self.assertEqual(int(kernel[radius, radius]), expected)
+        anti = entry["weights"][1, 4]
+        self.assertEqual(int(anti[0, 6]), 1)
+        self.assertEqual(int(anti[3, 3]), 2)
+        self.assertEqual(int(anti[6, 0]), 1)
+
     def test_table_lists_every_index(self):
         table = layer4_weights.format_weights_table()
         for index in range(layer4_weights.WEIGHT_COUNT):
@@ -297,16 +313,19 @@ class WeightDetailTests(unittest.TestCase):
 
 class SplitWeightsTests(unittest.TestCase):
     def test_total_count_is_three_times_the_full_weights_plus_direct(self):
-        # 4 套整头 × 3（整头 + _a + _b）+ 1 套 1x1 直通。
-        self.assertEqual(len(layer4_weights.FULL_WEIGHT_INDICES), 4)
+        # 每套整头 × 3（整头 + _a + _b）+ 1 套 1x1 直通。
         self.assertEqual(
             layer4_weights.WEIGHT_COUNT,
             3 * len(layer4_weights.FULL_WEIGHT_INDICES) + 1,
         )
+        self.assertEqual(len(layer4_weights.FULL_WEIGHT_INDICES), 5)
 
     def test_full_and_split_indices_are_listed_separately(self):
-        self.assertEqual(layer4_weights.FULL_WEIGHT_INDICES, (1, 2, 3, 4))
-        self.assertEqual(layer4_weights.SPLIT_WEIGHT_INDICES, (5, 6, 7, 8, 9, 10, 11, 12))
+        self.assertEqual(layer4_weights.FULL_WEIGHT_INDICES, (1, 2, 3, 4, 13))
+        self.assertEqual(
+            layer4_weights.SPLIT_WEIGHT_INDICES,
+            (5, 6, 7, 8, 9, 10, 11, 12, 14, 15),
+        )
 
     def test_split_entries_output_eight_channels(self):
         for index in layer4_weights.SPLIT_WEIGHT_INDICES:
