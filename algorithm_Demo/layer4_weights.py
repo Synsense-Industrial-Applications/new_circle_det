@@ -4,11 +4,13 @@ Layer-4 输出头把前级 `62x62x8` 的 split-D 特征图变成 Layer-4 接口�
 weights 就是一个函数，显式写出 `weights` 以及它配套的
 `kernel_size` / `padding` / `output_features` / `threshold_high` / `bias`。
 
-两族 weights：
+三组 weights：
 
-* **16 通道**（下标 0..3）：一个头输出 `64x64x16`，前 8 个通道用主斜率核，
+* **1x1 直通**（下标 0）：核为 `[[1]]` 的单个 tap，按输出 0..7 的通道对应方式
+  直通，不做空间卷积，输出 8 通道；
+* **16 通道**（下标 1..4）：一个头输出 `64x64x16`，前 8 个通道用主斜率核，
   后 8 个通道保持同一光流方向、换成互补斜率核；
-* **8 通道**（下标 4..11）：把上面每套按输出通道 0..7 / 8..15 对半切开，
+* **8 通道拆分**（下标 5..12）：把上面每套按输出通道 0..7 / 8..15 对半切开，
   `_a` 是前 8 通道（主斜率核），`_b` 是后 8 通道（互补斜率核），
   配合两个 8 通道头使用。两半各自的 D/S 家族分组都不变，只是物理通道号
   从 0 开始。
@@ -44,18 +46,54 @@ except ImportError:  # 直接从 algorithm_Demo/ 运行或导入时
 DEFAULT_WEIGHT_INDEX = 0
 
 # switch 支持的下标个数（get_layer4_weights 的 if/elif 必须覆盖 0..WEIGHT_COUNT-1）。
-WEIGHT_COUNT = 12
+WEIGHT_COUNT = 13
 
-# 下标分组：0..3 是 16 通道整头；4..11 是每套按输出通道 0..7 / 8..15 拆开的
-# 8 通道版本（_a = 前 8 通道，_b = 后 8 通道）。
-FULL_WEIGHT_INDICES = (0, 1, 2, 3)
-SPLIT_WEIGHT_INDICES = tuple(range(4, WEIGHT_COUNT))
+# 下标分组：0 是 1x1 直通；1..4 是 16 通道整头；5..12 是每套按输出通道
+# 0..7 / 8..15 拆开的 8 通道版本（_a = 前 8 通道，_b = 后 8 通道）。
+DIRECT_WEIGHT_INDEX = 0
+FULL_WEIGHT_INDICES = (1, 2, 3, 4)
+SPLIT_WEIGHT_INDICES = tuple(range(5, WEIGHT_COUNT))
 
 _INPUT_FEATURES = 8
 
-# 允许的输出通道数：16 通道整头，或对半切开后的 8 通道。
+# 允许的输出通道数：16 通道整头，或 1x1 直通 / 对半切开后的 8 通道。
 _HALF_FEATURES = LAYER4_FEATURE_COUNT // 2
 _ALLOWED_OUTPUT_FEATURES = (LAYER4_FEATURE_COUNT, _HALF_FEATURES)
+
+
+# 输出 0..7 的通道对应方式：输出特征 -> 输入特征。
+# 右下、左上（0/3/4/7）接输入 0/1/2/3，左下、右上（1/2/5/6）接输入 4/5/6/7。
+_ROUTING_0_TO_7 = {
+    0: 0,
+    3: 1,
+    4: 2,
+    7: 3,
+    1: 4,
+    2: 5,
+    5: 6,
+    6: 7,
+}
+
+
+def weights_direct1():
+    """下标 0：1x1 核 [[1]]，按输出 0..7 的通道对应方式直通，输出 8 通道。
+
+    单 tap、无空间卷积，相当于把前级特征直接透传，可用作对照。
+    """
+
+    weights = np.zeros((_HALF_FEATURES, _INPUT_FEATURES, 1, 1), dtype=np.int8)
+    for output_feature, input_feature in _ROUTING_0_TO_7.items():
+        weights[output_feature, input_feature, 0, 0] = 1
+
+    return {
+        "name": "direct1",
+        "kernel_size": 1,
+        "padding": 1,
+        "output_features": _HALF_FEATURES,
+        "threshold_high": 1,
+        "bias": 0,
+        "weights": weights,
+    }
 
 
 def weights_diag3():
@@ -350,28 +388,30 @@ def get_layer4_weights(index=DEFAULT_WEIGHT_INDEX):
 
     index = int(index)
     if index == 0:
-        entry = weights_diag3()
+        entry = weights_direct1()
     elif index == 1:
-        entry = weights_tangent3()
+        entry = weights_diag3()
     elif index == 2:
-        entry = weights_diag5()
+        entry = weights_tangent3()
     elif index == 3:
-        entry = weights_diag5_long()
+        entry = weights_diag5()
     elif index == 4:
-        entry = weights_diag3_a()
+        entry = weights_diag5_long()
     elif index == 5:
-        entry = weights_diag3_b()
+        entry = weights_diag3_a()
     elif index == 6:
-        entry = weights_tangent3_a()
+        entry = weights_diag3_b()
     elif index == 7:
-        entry = weights_tangent3_b()
+        entry = weights_tangent3_a()
     elif index == 8:
-        entry = weights_diag5_a()
+        entry = weights_tangent3_b()
     elif index == 9:
-        entry = weights_diag5_b()
+        entry = weights_diag5_a()
     elif index == 10:
-        entry = weights_diag5_long_a()
+        entry = weights_diag5_b()
     elif index == 11:
+        entry = weights_diag5_long_a()
+    elif index == 12:
         entry = weights_diag5_long_b()
     else:
         raise KeyError(
@@ -437,6 +477,7 @@ def format_weights_table():
 
 __all__ = (
     "DEFAULT_WEIGHT_INDEX",
+    "DIRECT_WEIGHT_INDEX",
     "FULL_WEIGHT_INDICES",
     "SPLIT_WEIGHT_INDICES",
     "WEIGHT_COUNT",

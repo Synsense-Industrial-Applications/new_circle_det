@@ -98,12 +98,13 @@ python algorithm_Demo/Demo_algorithm.py
 Layer-4 输出头的 weights（含配套的 `output_features` / `threshold_high` /
 `bias`）由
 [`algorithm_Demo/layer4_weights.py`](algorithm_Demo/layer4_weights.py)
-中的 12 套权重提供（4 套 16 通道整头 + 每套按 `0..7` / `8..15` 拆出的两个
-8 通道版本），用 switch（下标）选择；`threshold_low` 手动输入。两处都在
+中的 13 套权重提供（1 套 1x1 直通 + 4 套 16 通道整头 + 每套按 `0..7` /
+`8..15` 拆出的两个 8 通道版本），用 switch（下标）选择；`threshold_low`
+手动输入。两处都在
 [`algorithm_Demo/Demo_SNN.py`](algorithm_Demo/Demo_SNN.py) 顶部指定：
 
 ```python
-LAYER4_WEIGHT_INDEX = 0        # switch：0..11（输出通道数由条目给出）
+LAYER4_WEIGHT_INDEX = 0        # switch：0..12（输出通道数由条目给出）
 LAYER4_THRESHOLD_LOW = -1      # 手动输入
 ```
 
